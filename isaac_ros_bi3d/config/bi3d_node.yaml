@@ -1,0 +1,484 @@
+%YAML 1.2
+# Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+---
+name: sync
+components:
+- name: data_receiver_left
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 1
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver_left
+    min_size: 1
+- name: data_receiver_right
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 1
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver_right
+    min_size: 1
+- type: nvidia::isaac_ros::Synchronization
+  parameters:
+    left_input_placeholder: data_receiver_left
+    left_output_placeholder: left_data_transmitter
+    right_input_placeholder: data_receiver_right
+    right_output_placeholder: right_data_transmitter
+    inputs: [data_receiver_left, data_receiver_right]
+    outputs: [left_data_transmitter, right_data_transmitter]
+- name: left_data_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: left_data_transmitter
+    min_size: 1
+- name: right_data_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: right_data_transmitter
+    min_size: 1
+---
+name: left_roundrobin
+components:
+- name: data_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 1
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver
+    min_size: 1
+- type: nvidia::gxf::Broadcast
+  parameters:
+    source: data_receiver
+    mode: RoundRobin
+- name: data_transmitter_dla0
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+- name: data_transmitter_dla1
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+---
+name: right_roundrobin
+components:
+- name: data_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 1
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver
+    min_size: 1
+- type: nvidia::gxf::Broadcast
+  parameters:
+    source: data_receiver
+    mode: RoundRobin
+- name: data_transmitter_dla0
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+- name: data_transmitter_dla1
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+---
+name: gather
+components:
+- name: input_dla0
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 12
+    policy: 0
+- name: input_dla1
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 12
+    policy: 0
+- type: nvidia::gxf::MultiMessageAvailableSchedulingTerm
+  parameters:
+    receivers: [input_dla0, input_dla1]
+    min_size: 1
+- name: output
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 12
+- type: nvidia::gxf::Gather
+  parameters:
+    sink: output
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: output
+    min_size: 1
+---
+name: bi3d_dla0
+components:
+- name: data_receiver_left
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 6
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver_left
+    min_size: 1
+- name: data_receiver_right
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 6
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver_right
+    min_size: 1
+- name: data_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 6
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: data_transmitter
+    min_size: 1
+- name: pool
+  type: nvidia::gxf::BlockMemoryPool
+  parameters:
+    storage_type: 1
+    block_size: 2211840
+    num_blocks: 50
+- name: stream
+  type: nvidia::gxf::CudaStreamPool
+  parameters:
+    dev_id: 0
+    stream_flags: 1
+    stream_priority: 0
+    reserved_size: 1
+    max_size: 1
+- type: nvidia::cvcore::Bi3D
+  parameters:
+    left_image_name: "left_image"
+    right_image_name: "right_image"
+    output_name: "disparity"
+    pool: pool
+    stream_pool: stream
+    left_image_receiver: data_receiver_left
+    right_image_receiver: data_receiver_right
+    output_transmitter: data_transmitter
+
+    image_type: "RGB_U8"
+    pixel_mean: [0.0078431372549, 0.0078431372549, 0.0078431372549]
+    normalization: [0.00392156862, 0.00392156862, 0.00392156862]
+    standard_deviation: [-127.5, -127.5, -127.5]
+
+    max_batch_size: 32
+    input_layer_width: 960
+    input_layer_height: 576
+    model_input_type: "RGB_U8"
+
+    featnet_engine_file_path: "featnet_engine_file_path"
+    featnet_input_layers_name: ["input.1"]
+    featnet_output_layers_name: ["97"]
+  
+    segnet_engine_file_path: "segnet_engine_file_path"
+    segnet_input_layers_name: ["input.1"]
+    segnet_output_layers_name: ["278"]
+
+    engine_type: "DLA_CORE_0"
+    apply_sigmoid: false
+    apply_thresholding: true
+    threshold: 0.5
+    threshold_value_low: 0.0
+    threshold_value_high: 1.0
+    max_disparity_levels: 64
+    disparity_values: [18]
+---
+name: bi3d_dla1
+components:
+- name: data_receiver_left
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 6
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver_left
+    min_size: 1
+- name: data_receiver_right
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 6
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver_right
+    min_size: 1
+- name: data_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 6
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: data_transmitter
+    min_size: 1
+- name: pool
+  type: nvidia::gxf::BlockMemoryPool
+  parameters:
+    storage_type: 1
+    block_size: 2211840 
+    num_blocks: 50
+- name: stream
+  type: nvidia::gxf::CudaStreamPool
+  parameters:
+    dev_id: 0
+    stream_flags: 1
+    stream_priority: 0
+    reserved_size: 1
+    max_size: 1
+- type: nvidia::cvcore::Bi3D
+  parameters:
+    left_image_name: "left_image"
+    right_image_name: "right_image"
+    output_name: "disparity"
+    pool: pool
+    stream_pool: stream
+    left_image_receiver: data_receiver_left
+    right_image_receiver: data_receiver_right
+    output_transmitter: data_transmitter
+
+    image_type: "RGB_U8"
+    pixel_mean: [0.0078431372549, 0.0078431372549, 0.0078431372549]
+    normalization: [0.00392156862, 0.00392156862, 0.00392156862]
+    standard_deviation: [-127.5, -127.5, -127.5]
+
+    max_batch_size: 32
+    input_layer_width: 960
+    input_layer_height: 576
+    model_input_type: "RGB_U8"
+
+    featnet_engine_file_path: "featnet_engine_file_path"
+    featnet_input_layers_name: ["input.1"]
+    featnet_output_layers_name: ["97"]
+  
+    segnet_engine_file_path: "segnet_engine_file_path"
+    segnet_input_layers_name: ["input.1"]
+    segnet_output_layers_name: ["278"]
+
+    engine_type: "DLA_CORE_1"
+    apply_sigmoid: false
+    apply_thresholding: true
+    threshold: 0.5
+    threshold_value_low: 0.0
+    threshold_value_high: 1.0
+    max_disparity_levels: 64
+    disparity_values: [18]
+---
+name: sync_bi3d_dla0
+components:
+- name: rx
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 6
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: rx
+    min_size: 1
+- name: tx
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 6
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: tx
+    min_size: 1
+- type: nvidia::gxf::CudaStreamSync
+  parameters:
+    rx: rx
+    tx: tx
+---
+name: sync_bi3d_dla1
+components:
+- name: rx
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 6
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: rx
+    min_size: 1
+- name: tx
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 6
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: tx
+    min_size: 1
+- type: nvidia::gxf::CudaStreamSync
+  parameters:
+    rx: rx
+    tx: tx
+--- 
+name: bi3d_postprocess
+components:
+- name: pool
+  type: nvidia::gxf::BlockMemoryPool
+  parameters:
+    storage_type: 1
+    block_size: 2211840
+    num_blocks: 50
+- name: data_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 12
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver
+    min_size: 1
+- name: data_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 12
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: data_transmitter
+    min_size: 1
+- type: nvidia::isaac_ros::Bi3DPostprocess
+  parameters:
+    bi3d_receiver: data_receiver
+    output_transmitter: data_transmitter
+    pool: pool
+    disparity_values: [18]
+---
+name: bi3d_output_vault
+components:
+- name: input
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 1
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: input
+    min_size: 1
+- name: vault
+  type: nvidia::gxf::Vault
+  parameters:
+    source: input
+    max_waiting_count: 1
+    drop_waiting: false
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: sync/left_data_transmitter
+    target: left_roundrobin/data_receiver
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: sync/right_data_transmitter
+    target: right_roundrobin/data_receiver
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: left_roundrobin/data_transmitter_dla0
+    target: bi3d_dla0/data_receiver_left
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: right_roundrobin/data_transmitter_dla0
+    target: bi3d_dla0/data_receiver_right
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: left_roundrobin/data_transmitter_dla1
+    target: bi3d_dla1/data_receiver_left
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: right_roundrobin/data_transmitter_dla1
+    target: bi3d_dla1/data_receiver_right
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: bi3d_dla0/data_transmitter
+    target: sync_bi3d_dla0/rx
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: bi3d_dla1/data_transmitter
+    target: sync_bi3d_dla1/rx
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: sync_bi3d_dla0/tx
+    target: gather/input_dla0
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: sync_bi3d_dla1/tx
+    target: gather/input_dla1
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: gather/output
+    target: bi3d_postprocess/data_receiver
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: bi3d_postprocess/data_transmitter
+    target: bi3d_output_vault/input
+---
+name: scheduler
+components:
+- name: clock
+  type: nvidia::gxf::RealtimeClock
+- type: nvidia::gxf::MultiThreadScheduler
+  parameters:
+    clock: clock
+    worker_thread_number: 8
+    stop_on_deadlock: false
+
+
+
