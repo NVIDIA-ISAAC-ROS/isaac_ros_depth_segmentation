@@ -17,6 +17,11 @@
 #include <utility>
 #include <algorithm>
 
+#include \
+  "isaac_ros_nitros_bi3d_inference_param_array_type/nitros_bi3d_inference_param_array.hpp"
+#include "isaac_ros_nitros_disparity_image_type/nitros_disparity_image.hpp"
+#include "isaac_ros_nitros_image_type/nitros_image.hpp"
+
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
@@ -36,9 +41,17 @@ constexpr char INPUT_LEFT_IMAGE_TOPIC_NAME[] = "left_image_bi3d";
 constexpr char INPUT_RIGHT_IMAGE_COMPONENT_KEY[] = "sync/data_receiver_right";
 constexpr char INPUT_RIGHT_IMAGE_TOPIC_NAME[] = "right_image_bi3d";
 
+constexpr char INPUT_DISPARITY_COMPONENT_KEY[] = "disparity_roundrobin/data_receiver";
+constexpr char INPUT_DISPARITY_DEFAULT_TENSOR_FORMAT[] = "nitros_bi3d_inference_param_array";
+constexpr char INPUT_DISPARITY_TOPIC_NAME[] = "bi3d_disparity_values";
+
 constexpr char OUTPUT_BI3D_KEY[] = "bi3d_output_vault/vault";
 constexpr char OUTPUT_BI3D_DEFAULT_TENSOR_FORMAT[] = "nitros_disparity_image_32FC1";
 constexpr char OUTPUT_BI3D_TOPIC_NAME[] = "bi3d_node/bi3d_output";
+
+constexpr char OUTPUT_DISPARITY_KEY[] = "disparity_values_output_vault/vault";
+constexpr char OUTPUT_DISPARITY_DEFAULT_TENSOR_FORMAT[] = "nitros_bi3d_inference_param_array";
+constexpr char OUTPUT_DISPARITY_TOPIC_NAME[] = "bi3d_node/bi3d_disparity_values";
 
 constexpr char APP_YAML_FILENAME[] = "config/bi3d_node.yaml";
 constexpr char PACKAGE_NAME[] = "isaac_ros_bi3d";
@@ -51,7 +64,7 @@ const std::vector<std::pair<std::string, std::string>> EXTENSIONS = {
   {"isaac_ros_nitros", "gxf/multimedia/libgxf_multimedia.so"},
   {"isaac_ros_stereo_image_proc", "lib/libgxf_synchronization.so"},
   {"isaac_ros_bi3d", "cvcore_bi3d/libgxf_cvcore_bi3d.so"},
-  {"isaac_ros_bi3d", "cvcore_bi3d/libgxf_bi3d_postprocess.so"}
+  {"isaac_ros_bi3d", "cvcore_bi3d/libgxf_bi3d_postprocessor.so"}
 };
 const std::vector<std::string> PRESET_EXTENSION_SPEC_NAMES = {
   "isaac_ros_bi3d",
@@ -64,7 +77,7 @@ const nitros::NitrosPublisherSubscriberConfigMap CONFIG_MAP = {
   {INPUT_LEFT_IMAGE_COMPONENT_KEY,
     {
       .type = nitros::NitrosPublisherSubscriberType::NEGOTIATED,
-      .qos = rclcpp::QoS(1),
+      .qos = rclcpp::QoS(10),
       .compatible_data_format = INPUT_IMAGE_DEFAULT_TENSOR_FORMAT,
       .topic_name = INPUT_LEFT_IMAGE_TOPIC_NAME,
     }
@@ -72,18 +85,35 @@ const nitros::NitrosPublisherSubscriberConfigMap CONFIG_MAP = {
   {INPUT_RIGHT_IMAGE_COMPONENT_KEY,
     {
       .type = nitros::NitrosPublisherSubscriberType::NEGOTIATED,
-      .qos = rclcpp::QoS(1),
+      .qos = rclcpp::QoS(10),
       .compatible_data_format = INPUT_IMAGE_DEFAULT_TENSOR_FORMAT,
       .topic_name = INPUT_RIGHT_IMAGE_TOPIC_NAME,
+    }
+  },
+  {INPUT_DISPARITY_COMPONENT_KEY,
+    {
+      .type = nitros::NitrosPublisherSubscriberType::NEGOTIATED,
+      .qos = rclcpp::QoS(10),
+      .compatible_data_format = INPUT_DISPARITY_DEFAULT_TENSOR_FORMAT,
+      .topic_name = INPUT_DISPARITY_TOPIC_NAME,
     }
   },
   {OUTPUT_BI3D_KEY,
     {
       .type = nitros::NitrosPublisherSubscriberType::NEGOTIATED,
-      .qos = rclcpp::QoS(1),
+      .qos = rclcpp::QoS(10),
       .compatible_data_format = OUTPUT_BI3D_DEFAULT_TENSOR_FORMAT,
       .topic_name = OUTPUT_BI3D_TOPIC_NAME,
-      .frame_id_source_key = INPUT_LEFT_IMAGE_COMPONENT_KEY
+      .frame_id_source_key = INPUT_LEFT_IMAGE_COMPONENT_KEY,
+    }
+  },
+  {OUTPUT_DISPARITY_KEY,
+    {
+      .type = nitros::NitrosPublisherSubscriberType::NEGOTIATED,
+      .qos = rclcpp::QoS(10),
+      .compatible_data_format = OUTPUT_DISPARITY_DEFAULT_TENSOR_FORMAT,
+      .topic_name = OUTPUT_DISPARITY_TOPIC_NAME,
+      .frame_id_source_key = INPUT_DISPARITY_COMPONENT_KEY,
     }
   },
 };
@@ -150,7 +180,7 @@ Bi3DNode::Bi3DNode(const rclcpp::NodeOptions & options)
       {"278"})),
 
   // Bi3D extra parameters
-  disparity_values_(declare_parameter<std::vector<int64_t>>("disparity_values", {18}))
+  max_disparity_values_(declare_parameter<int64_t>("max_disparity_values", 64))
 {
   RCLCPP_DEBUG(get_logger(), "[Bi3DNode] Initializing Bi3DNode");
 
@@ -168,6 +198,11 @@ Bi3DNode::Bi3DNode(const rclcpp::NodeOptions & options)
     std::bind(
     &Bi3DNode::Bi3DVideoBufferNameCallback, this,
     std::placeholders::_1, std::placeholders::_2, "right_image");
+
+  registerSupportedType<nvidia::isaac_ros::nitros::NitrosBi3DInferenceParamArray>();
+  registerSupportedType<nvidia::isaac_ros::nitros::NitrosDisparityImage>();
+  registerSupportedType<nvidia::isaac_ros::nitros::NitrosImage>();
+
   startNitrosNode();
 }
 
@@ -203,24 +238,16 @@ void Bi3DNode::postLoadGraphCallback()
   getNitrosContext().setParameter1DStrVector(
     "bi3d_dla1", "nvidia::cvcore::Bi3D", "segnet_output_layers_name", segnet_output_layers_name_);
 
-  // Bi3D extra parameters
-  std::vector<int> dispVals(begin(disparity_values_), end(disparity_values_));
-  sort(dispVals.begin(), dispVals.end());
-  getNitrosContext().setParameter1DInt32Vector(
-    "bi3d_dla0", "nvidia::cvcore::Bi3D", "disparity_values", dispVals);
-  getNitrosContext().setParameter1DInt32Vector(
-    "bi3d_dla1", "nvidia::cvcore::Bi3D", "disparity_values", dispVals);
-  getNitrosContext().setParameter1DInt32Vector(
-    "bi3d_postprocess", "nvidia::isaac_ros::Bi3DPostprocess", "disparity_values", dispVals);
-
-  // Set Bi3D block memory size depending on number of output disparities
+  // Set Bi3D block memory size depending on maximum number of output disparities
   getNitrosContext().setParameterUInt64(
-    "bi3d_dla0", "nvidia::gxf::BlockMemoryPool", "block_size", BI3D_BLOCK_SIZE * dispVals.size());
+    "bi3d_dla0", "nvidia::gxf::BlockMemoryPool", "block_size",
+    BI3D_BLOCK_SIZE * max_disparity_values_);
   getNitrosContext().setParameterUInt64(
-    "bi3d_dla1", "nvidia::gxf::BlockMemoryPool", "block_size", BI3D_BLOCK_SIZE * dispVals.size());
+    "bi3d_dla1", "nvidia::gxf::BlockMemoryPool", "block_size",
+    BI3D_BLOCK_SIZE * max_disparity_values_);
   getNitrosContext().setParameterUInt64(
     "bi3d_postprocess", "nvidia::gxf::BlockMemoryPool", "block_size",
-    BI3D_BLOCK_SIZE * dispVals.size());
+    BI3D_BLOCK_SIZE * max_disparity_values_);
 
   RCLCPP_INFO(
     get_logger(), "[Bi3DNode] Setting featnet_engine_file_path: %s.",

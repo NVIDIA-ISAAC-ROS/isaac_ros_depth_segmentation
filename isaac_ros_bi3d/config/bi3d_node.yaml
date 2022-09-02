@@ -6,13 +6,14 @@
 # and any modifications thereto.  Any use, reproduction, disclosure or
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
+##################################################
 ---
 name: sync
 components:
 - name: data_receiver_left
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
-    capacity: 1
+    capacity: 12
     policy: 0
 - type: nvidia::gxf::MessageAvailableSchedulingTerm
   parameters:
@@ -21,7 +22,7 @@ components:
 - name: data_receiver_right
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
-    capacity: 1
+    capacity: 12
     policy: 0
 - type: nvidia::gxf::MessageAvailableSchedulingTerm
   parameters:
@@ -100,17 +101,49 @@ components:
   parameters:
     capacity: 1
 ---
+name: disparity_roundrobin
+components:
+- name: data_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 1
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver
+    min_size: 1
+- type: nvidia::gxf::Broadcast
+  parameters:
+    source: data_receiver
+    mode: RoundRobin
+- name: data_transmitter_dla0
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: data_transmitter_dla0
+    min_size: 1
+- name: data_transmitter_dla1
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: data_transmitter_dla1
+    min_size: 1
+---
 name: gather
 components:
 - name: input_dla0
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
-    capacity: 12
+    capacity: 6
     policy: 0
 - name: input_dla1
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
-    capacity: 12
+    capacity: 6
     policy: 0
 - type: nvidia::gxf::MultiMessageAvailableSchedulingTerm
   parameters:
@@ -148,6 +181,15 @@ components:
   parameters:
     receiver: data_receiver_right
     min_size: 1
+- name: data_receiver_disparity
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 6
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver_disparity
+    min_size: 1
 - name: data_transmitter
   type: nvidia::gxf::DoubleBufferTransmitter
   parameters:
@@ -161,7 +203,13 @@ components:
   parameters:
     storage_type: 1
     block_size: 2211840
-    num_blocks: 50
+    num_blocks: 12
+- name: forward_pool
+  type: nvidia::gxf::BlockMemoryPool
+  parameters:
+    storage_type: 0
+    block_size: 256
+    num_blocks: 12
 - name: stream
   type: nvidia::gxf::CudaStreamPool
   parameters:
@@ -176,10 +224,12 @@ components:
     right_image_name: "right_image"
     output_name: "disparity"
     pool: pool
+    forward_pool: forward_pool
     stream_pool: stream
     left_image_receiver: data_receiver_left
     right_image_receiver: data_receiver_right
     output_transmitter: data_transmitter
+    disparity_receiver: data_receiver_disparity
 
     image_type: "RGB_U8"
     pixel_mean: [0.0078431372549, 0.0078431372549, 0.0078431372549]
@@ -206,7 +256,6 @@ components:
     threshold_value_low: 0.0
     threshold_value_high: 1.0
     max_disparity_levels: 64
-    disparity_values: [18]
 ---
 name: bi3d_dla1
 components:
@@ -228,6 +277,15 @@ components:
   parameters:
     receiver: data_receiver_right
     min_size: 1
+- name: data_receiver_disparity
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 6
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver_disparity
+    min_size: 1
 - name: data_transmitter
   type: nvidia::gxf::DoubleBufferTransmitter
   parameters:
@@ -241,7 +299,13 @@ components:
   parameters:
     storage_type: 1
     block_size: 2211840 
-    num_blocks: 50
+    num_blocks: 12
+- name: forward_pool
+  type: nvidia::gxf::BlockMemoryPool
+  parameters:
+    storage_type: 0
+    block_size: 256
+    num_blocks: 12
 - name: stream
   type: nvidia::gxf::CudaStreamPool
   parameters:
@@ -256,10 +320,12 @@ components:
     right_image_name: "right_image"
     output_name: "disparity"
     pool: pool
+    forward_pool: forward_pool
     stream_pool: stream
     left_image_receiver: data_receiver_left
     right_image_receiver: data_receiver_right
     output_transmitter: data_transmitter
+    disparity_receiver: data_receiver_disparity
 
     image_type: "RGB_U8"
     pixel_mean: [0.0078431372549, 0.0078431372549, 0.0078431372549]
@@ -286,7 +352,6 @@ components:
     threshold_value_low: 0.0
     threshold_value_high: 1.0
     max_disparity_levels: 64
-    disparity_values: [18]
 ---
 name: sync_bi3d_dla0
 components:
@@ -343,7 +408,7 @@ components:
   parameters:
     storage_type: 1
     block_size: 2211840
-    num_blocks: 50
+    num_blocks: 24
 - name: data_receiver
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
@@ -361,14 +426,66 @@ components:
   parameters:
     transmitter: data_transmitter
     min_size: 1
-- type: nvidia::isaac_ros::Bi3DPostprocess
+- type: nvidia::isaac_ros::Bi3DPostprocessor
   parameters:
     bi3d_receiver: data_receiver
     output_transmitter: data_transmitter
     pool: pool
-    disparity_values: [18]
+    disparity_tensor_name: "disparity"
+    disparity_values_tensor_name: "bi3d_inference_disparities"
+---
+name: bi3d_output_message_splitter
+components:
+- name: data_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 12
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: data_receiver
+    min_size: 1
+- name: disparity_image_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 12
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: disparity_image_transmitter
+    min_size: 1
+- name: disparity_values_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 12
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: disparity_values_transmitter
+    min_size: 1
+- type: nvidia::isaac_ros::Bi3DMessageSplitter
+  parameters:
+    receiver: data_receiver
+    disparity_image_transmitter: disparity_image_transmitter
+    disparity_values_transmitter: disparity_values_transmitter
 ---
 name: bi3d_output_vault
+components:
+- name: input
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 1
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: input
+    min_size: 1
+- name: vault
+  type: nvidia::gxf::Vault
+  parameters:
+    source: input
+    max_waiting_count: 1
+    drop_waiting: false
+---
+name: disparity_values_output_vault
 components:
 - name: input
   type: nvidia::gxf::DoubleBufferReceiver
@@ -413,6 +530,20 @@ components:
   parameters:
     source: right_roundrobin/data_transmitter_dla0
     target: bi3d_dla0/data_receiver_right
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: disparity_roundrobin/data_transmitter_dla0
+    target: bi3d_dla0/data_receiver_disparity
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: disparity_roundrobin/data_transmitter_dla1
+    target: bi3d_dla1/data_receiver_disparity
 ---
 components:
 - name: connection
@@ -468,7 +599,21 @@ components:
   type: nvidia::gxf::Connection
   parameters:
     source: bi3d_postprocess/data_transmitter
+    target: bi3d_output_message_splitter/data_receiver
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: bi3d_output_message_splitter/disparity_image_transmitter
     target: bi3d_output_vault/input
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: bi3d_output_message_splitter/disparity_values_transmitter
+    target: disparity_values_output_vault/input
 ---
 name: scheduler
 components:
@@ -479,6 +624,4 @@ components:
     clock: clock
     worker_thread_number: 8
     stop_on_deadlock: false
-
-
 

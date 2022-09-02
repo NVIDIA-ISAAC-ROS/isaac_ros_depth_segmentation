@@ -54,7 +54,7 @@ private:
   const std::vector<std::string> segnet_output_layers_name_;
 
   // Bi3D extra parameters
-  std::vector<int64_t> disparity_values_;
+  int64_t max_disparity_values_;
 };
 
 }  // namespace bi3d
