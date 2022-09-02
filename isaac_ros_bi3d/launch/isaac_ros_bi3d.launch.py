@@ -24,15 +24,15 @@ def generate_launch_description():
             default_value='',
             description='The absolute path to the Bi3D Segnet TensorRT engine plan'),
         DeclareLaunchArgument(
-            'disparity_values',
-            default_value='[18]',
-            description='The disparity values (in px) used for Bi3D inference'),
+            'max_disparity_values',
+            default_value='64',
+            description='The maximum number of disparity values given for Bi3D inference'),
     ]
 
     # Bi3DNode parameters
     featnet_engine_file_path = LaunchConfiguration('featnet_engine_file_path')
     segnet_engine_file_path = LaunchConfiguration('segnet_engine_file_path')
-    disparity_values = LaunchConfiguration('disparity_values')
+    max_disparity_values = LaunchConfiguration('max_disparity_values')
 
     bi3d_node = ComposableNode(
         name='bi3d_node',
@@ -41,7 +41,7 @@ def generate_launch_description():
         parameters=[{
                 'featnet_engine_file_path': featnet_engine_file_path,
                 'segnet_engine_file_path': segnet_engine_file_path,
-                'disparity_values': disparity_values}])
+                'max_disparity_values': max_disparity_values}])
 
     container = ComposableNodeContainer(
         name='bi3d_container',

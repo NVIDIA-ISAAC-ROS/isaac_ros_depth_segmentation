@@ -50,11 +50,11 @@ add_library(bi3d_postprocess SHARED IMPORTED)
 if(${ARCHITECTURE} STREQUAL "x86_64")
   set_property(
     TARGET bi3d_postprocess PROPERTY IMPORTED_LOCATION
-    ${CMAKE_CURRENT_SOURCE_DIR}/cvcore/cvcore_bi3d/lib/x86_64/libgxf_bi3d_postprocess.so)
+    ${CMAKE_CURRENT_SOURCE_DIR}/cvcore/cvcore_bi3d/lib/x86_64/libgxf_bi3d_postprocessor.so)
 elseif(${ARCHITECTURE} STREQUAL "aarch64")
   set_property(
     TARGET bi3d_postprocess PROPERTY IMPORTED_LOCATION
-    ${CMAKE_CURRENT_SOURCE_DIR}/cvcore/cvcore_bi3d/lib/jetpack50/libgxf_bi3d_postprocess.so)
+    ${CMAKE_CURRENT_SOURCE_DIR}/cvcore/cvcore_bi3d/lib/jetpack50/libgxf_bi3d_postprocessor.so)
 endif()
 
 # bi3d_node
