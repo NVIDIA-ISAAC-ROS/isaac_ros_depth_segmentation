@@ -16,45 +16,64 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 ---
-name: forward
+name: freespace_segmentation
 components:
-- name: input
+- name: mask_in
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
-    capacity: 1
-- name: output
+    capacity: 12
+    policy: 0
+- name: occupancy_grid_out
   type: nvidia::gxf::DoubleBufferTransmitter
-- type: nvidia::isaac_ros::MessageForward
   parameters:
-    in: input
-    out: output
+    capacity: 12
+    policy: 0
+- name: allocator
+  type: nvidia::gxf::UnboundedAllocator
+- name: occupancy_grid_projector
+  type: nvidia::isaac_ros::freespace_segmentation::OccupancyGridProjector
+  parameters:
+    mask_receiver: mask_in
+    output_transmitter: occupancy_grid_out
+    allocator: allocator
+    projection_transform: []
+    intrinsics: []
+    grid_height: 10
+    grid_width: 10
+    grid_resolution: 0.01
 - type: nvidia::gxf::MessageAvailableSchedulingTerm
   parameters:
-    receiver: input
+    receiver: mask_in
+    min_size: 1
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: occupancy_grid_out
     min_size: 1
 ---
 name: vault
 components:
-- name: input
+- name: signal
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
     capacity: 1
+    policy: 0
 - type: nvidia::gxf::MessageAvailableSchedulingTerm
   parameters:
-    receiver: input
+    receiver: signal
     min_size: 1
 - name: vault
   type: nvidia::gxf::Vault
   parameters:
-    source: input
+    source: signal
     max_waiting_count: 1
     drop_waiting: false
 ---
 components:
-- type: nvidia::gxf::Connection
+- name: edge0
+  type: nvidia::gxf::Connection
   parameters:
-    source: forward/output
-    target: vault/input
+    source: freespace_segmentation/occupancy_grid_out
+    target: vault/signal
 ---
 components:
 - type: nvidia::gxf::GreedyScheduler

@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
-# Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto.  Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
 
 # This script plays a rosbag with prerecorded images and sends them to the Bi3DNode for inference,
 # then either saves the output prediction to spcified location as an image, or displays
@@ -25,10 +35,14 @@ def get_args():
     parser = argparse.ArgumentParser(description='Bi3D Node Visualizer')
     parser.add_argument('--save_image', action='store_true', help='Save output or display it',
                         default=False)
+    parser.add_argument('--enable_rosbag', action='store_true', help='Save output or display it',
+                        default=False)
     parser.add_argument('--max_disparity_value', type=int,
                         help='Maximium disparity value given to Bi3D Node', default=18)
     parser.add_argument('--result_path', default='/workspaces/isaac_ros-dev/src/bi3d_output.png',
                         help='Absolute path to save your result.')
+    parser.add_argument('--disparity_topic', default='bi3d_node/bi3d_output',
+                        help='Topic name for disparity output.')
     parser.add_argument('--rosbag_path',
                         default='/workspaces/isaac_ros-dev/src/'
                                 'isaac_ros_proximity_segmentation/resources/'
@@ -46,8 +60,9 @@ class Bi3DVisualizer(Node):
         self.encoding = 'rgb8'
         self._bridge = cv_bridge.CvBridge()
         self._bi3d_sub = self.create_subscription(
-            DisparityImage, 'bi3d_node/bi3d_output', self.bi3d_callback, 10)
-        subprocess.Popen('ros2 bag play --loop ' + self.args.rosbag_path, shell=True)
+            DisparityImage, self.args.disparity_topic, self.bi3d_callback, 10)
+        if self.args.enable_rosbag:
+            subprocess.Popen('ros2 bag play --loop ' + self.args.rosbag_path, shell=True)
         self.image_scale = 255.0
 
     def bi3d_callback(self, data):

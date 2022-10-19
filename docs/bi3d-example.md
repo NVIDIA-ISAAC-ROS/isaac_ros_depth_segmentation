@@ -1,6 +1,6 @@
 # Example Usage of Isaac ROS Proximity Segmentation
 
-This is an example use case of Isaac ROS Proximity Segmentation, which includes monitoring the forward zones of an autonomous mobile robot (AMR) using a HAWK stereo camera. Consider three zones in front of the robot (Zones 1-3), corresponding to different alerts and actions the robot must take if an object breaches the zone. Zone 3 generates a warning, Zone 2 sends a signal for the robot to slow, and Zone 1 results in the robot stopping immediately. 
+This is an example use case of Isaac ROS Proximity Segmentation, which includes monitoring the forward zones of an autonomous mobile robot (AMR) using a HAWK stereo camera. Consider three zones in front of the robot (Zones 1-3), corresponding to different alerts and actions the robot must take if an object breaches the zone. Zone 3 generates a warning, Zone 2 sends a signal for the robot to slow, and Zone 1 results in the robot stopping immediately.
 
 <div align="center"><img src="../resources/safety_zones.png" width="400px"/></div>
 

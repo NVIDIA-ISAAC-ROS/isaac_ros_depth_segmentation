@@ -1,16 +1,24 @@
-# Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto.  Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
 
 import os
 import subprocess
 import time
 
-from isaac_ros_bi3d_interfaces.msg import Bi3DInferenceParametersArray
 from isaac_ros_test import IsaacROSBaseTest
 
 from launch_ros.actions import ComposableNodeContainer
@@ -75,7 +83,8 @@ def generate_test_description():
                      'segnet_engine_file_path': segnet_engine_file_path,
                      'featnet_output_layers_name': ['97'],
                      'segnet_output_layers_name': ['294'],
-                     'max_disparity_values': 1}]
+                     'max_disparity_values': 1,
+                     'disparity_values': [18]}]
     )
 
     container = ComposableNodeContainer(
@@ -109,11 +118,6 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
         image.header.frame_id = name
         return image
 
-    def _create_disparity_value_array(self):
-        disp_vals = Bi3DInferenceParametersArray()
-        disp_vals.disparity_values = [18]
-        return disp_vals
-
     def test_image_bi3d(self):
         end_time = time.time() + self.TIMEOUT
         while time.time() < end_time:
@@ -129,8 +133,8 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
 
         received_messages = {}
 
-        self.generate_namespace_lookup(['left_image_bi3d', 'right_image_bi3d',
-                                        'bi3d_disparity_values', 'bi3d_node/bi3d_output'])
+        self.generate_namespace_lookup(
+            ['left_image_bi3d', 'right_image_bi3d', 'bi3d_node/bi3d_output'])
 
         subs = self.create_logging_subscribers(
             [('bi3d_node/bi3d_output', DisparityImage)], received_messages)
@@ -141,15 +145,10 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
         image_right_pub = self.node.create_publisher(
             Image, self.namespaces['right_image_bi3d'], self.DEFAULT_QOS
         )
-        disparity_values_pub = self.node.create_publisher(
-            Bi3DInferenceParametersArray, self.namespaces['bi3d_disparity_values'],
-            self.DEFAULT_QOS
-        )
 
         try:
             left_image = self._create_image('left_image')
             right_image = self._create_image('right_image')
-            disparity_values = self._create_disparity_value_array()
 
             end_time = time.time() + self.TIMEOUT
             done = False
@@ -157,7 +156,6 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
             while time.time() < end_time:
                 image_left_pub.publish(left_image)
                 image_right_pub.publish(right_image)
-                disparity_values_pub.publish(disparity_values)
 
                 rclpy.spin_once(self.node, timeout_sec=0.1)
 
