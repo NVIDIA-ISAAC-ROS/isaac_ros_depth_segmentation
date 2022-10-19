@@ -16,7 +16,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.8)
-project(isaac_ros_bi3d)
+project(isaac_ros_bi3d_freespace)
 
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
@@ -40,13 +40,14 @@ message(STATUS "Architecture: ${ARCHITECTURE}")
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
-# bi3d_node
-ament_auto_add_library(bi3d_node SHARED src/bi3d_node.cpp)
-target_compile_definitions(bi3d_node
+# freespace_segmentation_node
+ament_auto_add_library(freespace_segmentation_node SHARED src/freespace_segmentation_node.cpp)
+target_compile_definitions(freespace_segmentation_node
   PRIVATE "COMPOSITION_BUILDING_DLL"
 )
-rclcpp_components_register_nodes(bi3d_node "nvidia::isaac_ros::bi3d::Bi3DNode")
-set(node_plugins "${node_plugins}nvidia::isaac_ros::bi3d::Bi3DNode;$<TARGET_FILE:bi3d_node>\n")
+rclcpp_components_register_nodes(freespace_segmentation_node
+  "nvidia::isaac_ros::bi3d_freespace::FreespaceSegmentationNode")
+set(node_plugins "${node_plugins}nvidia::isaac_ros::bi3d_freespace::FreespaceSegmentationNode;$<TARGET_FILE:freespace_segmentation_node>\n")
 
 # Install config directory
 install(
@@ -54,8 +55,7 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
-set_target_properties(bi3d_node PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
-install(TARGETS bi3d_node
+install(TARGETS freespace_segmentation_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -63,15 +63,14 @@ install(TARGETS bi3d_node
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+
+  # Ignore copyright notices since we use custom NVIDIA Isaac ROS Software License
+  set(ament_cmake_copyright_FOUND TRUE)
+
   ament_lint_auto_find_test_dependencies()
 
   find_package(launch_testing_ament_cmake REQUIRED)
-  add_launch_test(test/isaac_ros_bi3d_test.py TIMEOUT "1000")
+  add_launch_test(test/isaac_ros_freespace_segmentation_pol.py TIMEOUT "1000")
 endif()
 
-install(PROGRAMS
-  scripts/isaac_ros_bi3d_visualizer.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-ament_auto_package(INSTALL_TO_SHARE launch config)
+ament_auto_package(INSTALL_TO_SHARE launch)
