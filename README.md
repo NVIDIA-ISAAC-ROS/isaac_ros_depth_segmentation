@@ -2,6 +2,12 @@
 
 <div align="center"><img alt="Isaac ROS Proximity Segmentation Sample Output" src="resources/isaac_ros_bi3d_real_opt.gif" width="500px"/></div>
 
+---
+## Webinar Available
+Learn how to use this package by watching our on-demand webinar: [Using ML Models in ROS2 to Robustly Estimate Distance to Obstacles](https://gateway.on24.com/wcc/experience/elitenvidiabrill/1407606/3998202/isaac-ros-webinar-series)
+
+---
+
 ## Overview
 
 This repository provides NVIDIA hardware-accelerated packages for proximity segmentation. The `isaac_ros_bi3d` package uses an optimized [Bi3D](https://arxiv.org/abs/2005.07274) model to perform stereo-depth estimation via binary classification, which is used for proximity segmentation. Proximity segmentation can be used to determine whether an obstacle is within a proximity field and to avoid collisions with obstacles during navigation.
@@ -29,6 +35,7 @@ These data have been collected per the methodology described [here](https://gith
 ## Table of Contents
 
 - [Isaac ROS Proximity Segmentation](#isaac-ros-proximity-segmentation)
+  - [Webinar Available](#webinar-available)
   - [Overview](#overview)
     - [Isaac ROS NITROS Acceleration](#isaac-ros-nitros-acceleration)
   - [Performance](#performance)
