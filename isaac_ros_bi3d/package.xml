@@ -21,7 +21,7 @@ SPDX-License-Identifier: Apache-2.0
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>isaac_ros_bi3d</name>
-  <version>0.20.0</version>
+  <version>0.30.0</version>
   <description>Bi3D inference network for ROS</description>
 
   <maintainer email="hemals@nvidia.com">Hemal Shah</maintainer>
@@ -37,6 +37,8 @@ SPDX-License-Identifier: Apache-2.0
   <depend>isaac_ros_nitros_image_type</depend>
   <depend>isaac_ros_nitros_disparity_image_type</depend>
   <depend>isaac_ros_nitros_bi3d_inference_param_array_type</depend>
+
+  <build_depend>isaac_ros_common</build_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

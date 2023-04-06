@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,7 +50,10 @@ def generate_launch_description():
         parameters=[{
                 'featnet_engine_file_path': featnet_engine_file_path,
                 'segnet_engine_file_path': segnet_engine_file_path,
-                'max_disparity_values': max_disparity_values}])
+                'max_disparity_values': max_disparity_values}],
+        remappings=[('left_image_bi3d', 'rgb_left'),
+                    ('right_image_bi3d', 'rgb_right')]
+        )
 
     container = ComposableNodeContainer(
         name='bi3d_container',
