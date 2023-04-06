@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -102,7 +102,7 @@ def generate_test_description():
 class IsaacROSBi3DTest(IsaacROSBaseTest):
     IMAGE_HEIGHT = 576
     IMAGE_WIDTH = 960
-    TIMEOUT = 1000
+    TIMEOUT = 300
     GXF_WAIT_SEC = 10
     FEATNET_ENGINE_FILE_PATH = '/tmp/dummy_bi3dnet_featnet.engine'
     SEGNET_ENGINE_FILE_PATH = '/tmp/dummy_bi3dnet_segnet.engine'

@@ -4,17 +4,19 @@
 
 ---
 ## Webinar Available
-Learn how to use this package by watching our on-demand webinar: [Using ML Models in ROS2 to Robustly Estimate Distance to Obstacles](https://gateway.on24.com/wcc/experience/elitenvidiabrill/1407606/3998202/isaac-ros-webinar-series)
+Learn how to use this package by watching our on-demand webinar: [Using ML Models in ROS 2 to Robustly Estimate Distance to Obstacles](https://gateway.on24.com/wcc/experience/elitenvidiabrill/1407606/3998202/isaac-ros-webinar-series)
 
 ---
 
 ## Overview
 
-This repository provides NVIDIA hardware-accelerated packages for proximity segmentation. The `isaac_ros_bi3d` package uses an optimized [Bi3D](https://arxiv.org/abs/2005.07274) model to perform stereo-depth estimation via binary classification, which is used for proximity segmentation. Proximity segmentation can be used to determine whether an obstacle is within a proximity field and to avoid collisions with obstacles during navigation.
+This repository provides NVIDIA hardware-accelerated packages for proximity segmentation. The `isaac_ros_bi3d` package uses the optimized [Bi3D DNN model](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/isaac/models/bi3d_proximity_segmentation) to perform stereo-depth estimation via binary classification, which is used for proximity segmentation. Proximity segmentation can be used to determine whether an obstacle is within a proximity field and to avoid collisions with obstacles during navigation.
 
-Proximity segmentation predicts freespace from the ground plane, eliminating the need to perform ground plane removal from the segmentation image. The `isaac_ros_bi3d_freespace` package leverages this functionality to produce an occupancy grid that indicates freespace in the neighborhood of the robot. This camera-based solution offers a number of appealing advantages over traditional 360 lidar occupancy scanning, including better detection of low-profile obstacles.
+<div align="center"><img alt="graph of nodes with Bi3D" src="resources/isaac_ros_bi3d_nodegraph.png" width="800px"/></div>
 
-Compared to other stereo disparity functions, proximity segmentation is unique in that it provides a prediction of whether an obstacle is within a proximity field, instead of continuous depth, while simultaneously predicting freespace from the ground plane, which other functions typically do not provide. Proximity segmentation is diverse relative to other stereo disparity functions in Isaac ROS, as it is a different algorithm that runs on NVIDIA DLA (deep learning accelerator), which is separate and independent from the GPU. For more information on disparity, refer to [this page](https://en.wikipedia.org/wiki/Binocular_disparity).
+[Bi3D](https://arxiv.org/abs/2005.07274) is used in a graph of nodes to provide proximity segmentation from a time-synchronized input left and right stereo image pair. Images to Bi3D need to be rectified and resized to the appropriate input resolution. The aspect ratio of the image needs to be maintained; hence, a crop and resize may be required to maintain the input aspect ratio. The graph for DNN encode, to DNN inference, to DNN decode is part of the Bi3D node. Inference is performed using TensorRT, as the Bi3D DNN model is designed to use optimizations supported by TensorRT.
+
+Compared to other stereo disparity functions, proximity segmentation provides a prediction of whether an obstacle is within a proximity field, as opposed to continuous depth, while simultaneously predicting freespace from the ground plane, which other functions typically do not provide. Also unlike other stereo disparity functions in Isaac ROS, proximity segmentation runs on NVIDIA DLA (deep learning accelerator), which is separate and independent from the GPU. For more information on disparity, refer to [this page](https://en.wikipedia.org/wiki/Binocular_disparity).
 
 ### Isaac ROS NITROS Acceleration
 
@@ -22,15 +24,11 @@ This package is powered by [NVIDIA Isaac Transport for ROS (NITROS)](https://dev
 
 ## Performance
 
-The following are the benchmark performance results of the prepared pipelines in this package, by supported platform:
+The following table summarizes the per-platform performance statistics of sample graphs that use this package, with links included to the full benchmark output. These benchmark configurations are taken from the [Isaac ROS Benchmark](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark#list-of-isaac-ros-benchmarks) collection, based on the [`ros2_benchmark`](https://github.com/NVIDIA-ISAAC-ROS/ros2_benchmark) framework.
 
-| Pipeline                      | AGX Orin            | Orin Nano        | x86_64 w/ RTX 3060 Ti |
-| ----------------------------- | ------------------- | ---------------- | --------------------- |
-| Bi3D Stereo Node (576p) (DLA) | 62 fps <br> 46ms    | N/A              | N/A                   |
-| Bi3D Stereo Node (576p) (GPU) | 81 fps <br> 61ms    | 25 fps <br> 65ms | 145 fps <br> 386ms    |
-| Freespace Segmentation        | 1145 fps <br> 1.3ms | 725 fps <br> 2ms | 1490 fps <br> 0.3ms   |
-
-These data have been collected per the methodology described [here](https://github.com/NVIDIA-ISAAC-ROS/.github/blob/main/profile/performance-summary.md#methodology).
+| Sample Graph                                                                                                                             | Input Size | AGX Orin                                                                                                                                 | Orin NX                                                                                                                                 | x86_64 w/ RTX 3060 Ti                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Proximity Segmentation Node](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/scripts//isaac_ros_bi3d_node.py) | 576p       | [45.9 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-agx_orin.json)<br>32 ms | [26.3 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-orin_nx.json)<br>65 ms | [148 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-x86_64_rtx_3060Ti.json)<br>22 ms |
 
 ## Table of Contents
 
@@ -52,7 +50,7 @@ These data have been collected per the methodology described [here](https://gith
     - [Download Pre-trained Models (.onnx) from NGC](#download-pre-trained-models-onnx-from-ngc)
     - [Convert the Pre-trained Models (.onnx) to TensorRT Engine Plans](#convert-the-pre-trained-models-onnx-to-tensorrt-engine-plans)
       - [Generating Engine Plans for Jetson](#generating-engine-plans-for-jetson)
-      - [Generating Engine Plans for x86_64](#generating-engine-plans-for-x86_64)
+      - [Generating Engine Plans for x86\_64](#generating-engine-plans-for-x86_64)
   - [Package Reference](#package-reference)
     - [`isaac_ros_bi3d`](#isaac_ros_bi3d)
       - [Bi3D Overview](#bi3d-overview)
@@ -61,11 +59,6 @@ These data have been collected per the methodology described [here](https://gith
       - [ROS Parameters](#ros-parameters)
       - [ROS Topics Subscribed](#ros-topics-subscribed)
       - [ROS Topics Published](#ros-topics-published)
-    - [`isaac_ros_bi3d_freespace`](#isaac_ros_bi3d_freespace)
-      - [Usage](#usage-1)
-      - [ROS Parameters](#ros-parameters-1)
-      - [ROS Topics Subscribed](#ros-topics-subscribed-1)
-      - [ROS Topics Published](#ros-topics-published-1)
   - [Troubleshooting](#troubleshooting)
     - [Isaac ROS Troubleshooting](#isaac-ros-troubleshooting)
     - [DNN and Triton Troubleshooting](#dnn-and-triton-troubleshooting)
@@ -73,24 +66,24 @@ These data have been collected per the methodology described [here](https://gith
 
 ## Latest Update
 
-Update 2022-10-19: Add Freespace Segmentation functionality to produce occupancy grids from Bi3D's output
+Update 2023-04-05: Source available GXF extensions
 
 ## Supported Platforms
 
-This package is designed and tested to be compatible with ROS2 Humble running on [Jetson](https://developer.nvidia.com/embedded-computing) or an x86_64 system with an NVIDIA GPU.
+This package is designed and tested to be compatible with ROS 2 Humble running on [Jetson](https://developer.nvidia.com/embedded-computing) or an x86_64 system with an NVIDIA GPU.
 
-> **Note**: Versions of ROS2 earlier than Humble are **not** supported. This package depends on specific ROS2 implementation features that were only introduced beginning with the Humble release.
+> **Note**: Versions of ROS 2 earlier than Humble are **not** supported. This package depends on specific ROS 2 implementation features that were only introduced beginning with the Humble release.
 
-| Platform | Hardware                                                                                                                                                                                                 | Software                                                                                                             | Notes                                                                                                                                                                                       |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Jetson   | [Jetson Orin](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/) <br> [Jetson Xavier](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-agx-xavier/) | [JetPack 5.0.2](https://developer.nvidia.com/embedded/jetpack)                                                       | For best performance, ensure that the [power settings](https://docs.nvidia.com/jetson/archives/r34.1/DeveloperGuide/text/SD/PlatformPowerAndPerformance.html) are configured appropriately. |
-| x86_64   | NVIDIA GPU                                                                                                                                                                                               | [Ubuntu 20.04+](https://releases.ubuntu.com/20.04/) <br> [CUDA 11.6.1+](https://developer.nvidia.com/cuda-downloads) |
+| Platform | Hardware                                                                                                                                                                                                 | Software                                                                                                           | Notes                                                                                                                                                                                       |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Jetson   | [Jetson Orin](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/) <br> [Jetson Xavier](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-agx-xavier/) | [JetPack 5.1.1](https://developer.nvidia.com/embedded/jetpack)                                                     | For best performance, ensure that the [power settings](https://docs.nvidia.com/jetson/archives/r34.1/DeveloperGuide/text/SD/PlatformPowerAndPerformance.html) are configured appropriately. |
+| x86_64   | NVIDIA GPU                                                                                                                                                                                               | [Ubuntu 20.04+](https://releases.ubuntu.com/20.04/) <br> [CUDA 11.8+](https://developer.nvidia.com/cuda-downloads) |
 
 ### Docker
 
 To simplify development, we strongly recommend leveraging the Isaac ROS Dev Docker images by following [these steps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/docs/dev-env-setup.md). This will streamline your development environment setup with the correct versions of dependencies on both Jetson and x86_64 platforms.
 
-> **Note:** All Isaac ROS quick start guides, tutorials, and examples have been designed with the Isaac ROS Docker images as a prerequisite.
+> **Note**: All Isaac ROS quick start guides, tutorials, and examples have been designed with the Isaac ROS Docker images as a prerequisite.
 
 ## Quickstart
 
@@ -136,10 +129,10 @@ To simplify development, we strongly recommend leveraging the Isaac ROS Dev Dock
       ```bash
       /usr/src/tensorrt/bin/trtexec --saveEngine=/tmp/models/bi3d/bi3dnet_featnet.plan \
       --onnx=/tmp/models/bi3d/featnet.onnx \
-      --int8 --useDLACore=0 &&
+      --int8 --useDLACore=0 --allowGPUFallback &&
       /usr/src/tensorrt/bin/trtexec --saveEngine=/tmp/models/bi3d/bi3dnet_segnet.plan \
       --onnx=/tmp/models/bi3d/segnet.onnx \
-      --int8 --useDLACore=0
+      --int8 --useDLACore=0 --allowGPUFallback
       ```
 
     If using x86_64:
@@ -151,7 +144,7 @@ To simplify development, we strongly recommend leveraging the Isaac ROS Dev Dock
       --onnx=/tmp/models/bi3d/segnet.onnx --int8
       ```
 
-    > **Note:** The engine plans generated using the x86_64 commands will also work on Jetson, but performance will be reduced.
+    > **Note**: The engine plans generated using the x86_64 commands will also work on Jetson, but performance will be reduced.
 
 7. Build and source the workspace:  
 
@@ -170,7 +163,7 @@ To simplify development, we strongly recommend leveraging the Isaac ROS Dev Dock
 9. Run the launch file to spin up a demo of this package:
 
       ```bash
-      ros2 launch isaac_ros_bi3d_freespace isaac_ros_bi3d_freespace.launch.py featnet_engine_file_path:=/tmp/models/bi3d/bi3dnet_featnet.plan \
+      ros2 launch isaac_ros_bi3d isaac_ros_bi3d.launch.py featnet_engine_file_path:=/tmp/models/bi3d/bi3dnet_featnet.plan \
       segnet_engine_file_path:=/tmp/models/bi3d/bi3dnet_segnet.plan \
       max_disparity_values:=10
       ```
@@ -188,26 +181,29 @@ To simplify development, we strongly recommend leveraging the Isaac ROS Dev Dock
     ros2 bag play --loop src/isaac_ros_proximity_segmentation/resources/rosbags/bi3dnode_rosbag
     ```
 
-12. Open a **third** terminal inside the Docker container:
+12. Open two **new** terminals inside the Docker container for visualization:
 
     ```bash
     cd ~/workspaces/isaac_ros-dev/src/isaac_ros_common && \
-      ./scripts/run_dev.sh
+      ./scripts/run_dev.sh && source install/setup.bash
     ```
 
-13. Visualize the occupancy grid in RViz.
+13. Visualize the output.
 
-    Start RViz:
+    Start disparity visualizer:
 
     ```bash
-    rviz2
+    ros2 run isaac_ros_bi3d isaac_ros_bi3d_visualizer.py --max_disparity_value 10
     ```
+    Start image visualizer:
 
-    In the left pane, change **Fixed Frame** to `base_link`.
-
-    In the left pane, click the **Add** button, then select **By topic** followed by **Map** to add the occupancy grid.
-
-    <div align="center"><img alt="RViz Output" src="resources/Rviz_quickstart.png" width="500px"/></div>
+    ```bash
+    ros2 run image_view image_view --ros-args -r image:=rgb_left
+    ```
+    <div align="center">
+      <img alt="RViz Output" src="resources/quickstart_disparity.png" width="500px"/>
+      <img alt="RViz Output" src="resources/quickstart_rgb.png" width="500px"/>
+    </div>
 
 ## Next Steps
 
@@ -215,12 +211,10 @@ To simplify development, we strongly recommend leveraging the Isaac ROS Dev Dock
 
 To continue your exploration, check out the following suggested examples:
 
-| Example                                                                                                  | Dependencies                                                                                                         |
-| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [Zone detection for an autonomous mobile robot (AMR)](./docs/bi3d-example.md)                            | --                                                                                                                   |
-| [Tutorial with RealSense, Bi3D, and Freespace Segmentation](./docs/tutorial-bi3d-freespace-realsense.md) | [`realsense-ros`](https://github.com/NVIDIA-ISAAC-ROS/.github/blob/main/profile/realsense-setup.md)                  |
-| [Tutorial for Bi3D with Isaac Sim](./docs/tutorial-bi3d-isaac-sim.md)                                    | --                                                                                                                   |
-| [Tutorial for Freespace Segmentation with Isaac Sim](./docs/tutorial-bi3d-freespace-isaac-sim.md)        | --                                                                                                                   |
+| Example                                                                       | Dependencies |
+| ----------------------------------------------------------------------------- | ------------ |
+| [Zone detection for an autonomous mobile robot (AMR)](./docs/bi3d-example.md) | --           |
+| [Tutorial for Bi3D with Isaac Sim](./docs/tutorial-bi3d-isaac-sim.md)         | --           |
 
 ### Use Different Models
 
@@ -255,12 +249,12 @@ The following steps show how to download pretrained Bi3D DNN inference models.
 
 `trtexec` is used to convert pre-trained models (`.onnx`) to the TensorRT engine plan and is included in the Isaac ROS docker container under `/usr/src/tensorrt/bin/trtexec`.
 
-> **Tip:** Use `/usr/src/tensorrt/bin/trtexec -h` for more information on using the tool.
+> **Tip**: Use `/usr/src/tensorrt/bin/trtexec -h` for more information on using the tool.
 
 #### Generating Engine Plans for Jetson  
 
   ```bash
-  /usr/src/tensorrt/bin/trtexec --onnx=<PATH_TO_ONNX_MODEL_FILE> --saveEngine=<PATH_TO_WHERE_TO_SAVE_ENGINE_PLAN> --useDLACore=<SET_CORE_TO_ENABLE_DLA> --int8
+  /usr/src/tensorrt/bin/trtexec --onnx=<PATH_TO_ONNX_MODEL_FILE> --saveEngine=<PATH_TO_WHERE_TO_SAVE_ENGINE_PLAN> --useDLACore=<SET_CORE_TO_ENABLE_DLA> --int8 --allowGPUFallback
   ```
 
 #### Generating Engine Plans for x86_64  
@@ -277,7 +271,7 @@ The following steps show how to download pretrained Bi3D DNN inference models.
 
 Bi3D predicts if an obstacle is within a given proximity field via a series of binary classifications; the binary classification per pixel determines if the pixel is in front of or behind the proximity field. As such, Bi3D is differentiated from other stereo disparity functions which output continuous [disparity](https://en.wikipedia.org/wiki/Binocular_disparity). Bi3D allows you to increase the diversity of functions used for obstacle detection and improve hardware diversity because Isaac ROS Proximity Segmentation is optimized to run on NVIDIA DLA hardware, which is separate from the GPU. In the form presented here, Bi3D is intended to provide proximity detections, and is not a replacement for the continuous depth estimation provided by Isaac ROS DNN Stereo Disparity.
 
-> **Note:** This DNN is optimized for and evaluated with RGB global shutter camera images, and accuracy may vary on monochrome images.
+> **Note**: This DNN is optimized for and evaluated with RGB global shutter camera images, and accuracy may vary on monochrome images.
 
 #### Usage
 
@@ -318,42 +312,7 @@ The prediction of freespace eliminates the need for ground plane removal in the 
 | ROS Topic                         | Interface                                                                                                                                                                                       | Description                                                                                                                                                                                                                                                                                                       |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bi3d_node/bi3d_output`           | [stereo_msgs/DisparityImage](https://github.com/ros2/common_interfaces/blob/humble/stereo_msgs/msg/DisparityImage.msg)                                                                          | The proximity segmentation of Bi3D given as a disparity image. For pixels not deemed freespace, their value is set to the closest (largest) disparity plane that is breached. A pixel value is set to 0 if it doesn't breach any disparity plane or if it is freespace. <br><br> Output Resolution: 960x576 (WxH) |
-| `bi3d_node/bi3d_disparity_values` | [isaac_ros_bi3d_interfaces/Bi3DInferenceParametersArray](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/isaac_ros_bi3d_interfaces/msg/Bi3DInferenceParametersArray.msg)            | The disparity values used for Bi3D inference. The timestamp is matched to the timestamp in the correpsonding output image from  `bi3d_node/bi3d_output`                                                                                                                                                           |
-
-### `isaac_ros_bi3d_freespace`
-
-#### Usage
-
-```bash
-ros2 launch isaac_ros_bi3d_freespace isaac_ros_freespace_segmentation.launch.py base_link_frame:=<"name of base link"> camera_frame:=<"name of camera frame"> s_x:=<"pixel pitch in x dimension"> s_y:=<"pixel pitch in y dimension"> f:=<"focal length"> grid_width:=<"desired grid width"> grid_height:=<"desired grid height"> grid_resolution:=<"desired grid resolution">
-```
-
-#### ROS Parameters
-
-| ROS Parameter     | Type          | Default     | Description                                                                     |
-| ----------------- | ------------- | ----------- | ------------------------------------------------------------------------------- |
-| `base_link_frame` | `std::string` | `base_link` | The name of the `tf2` frame attached to the robot base                          |
-| `camera_frame`    | `std::string` | `camera`    | The name of the `tf2` frame attached to the camera                              |
-| `s_x`             | `double`      | `1e5`       | The pitch of pixels on the image sensor in the X dimension, in pixels per meter |
-| `s_y`             | `double`      | `1e5`       | The pitch of pixels on the image sensor in the Y dimension, in pixels per meter |
-| `f`               | `double`      | `1e-2`      | The focal length of the camera, in meters                                       |
-| `grid_width`      | `int`         | `100`       | The width of the output occupancy grid, in number of cells                      |
-| `grid_height`     | `int`         | `100`       | The height of the output occupancy grid, in number of cells                     |
-| `grid_resolution` | `double`      | `0.01`      | The resolution of the output occupancy grid, in meters per cell                 |
-
-#### ROS Topics Subscribed
-
-| ROS Topic                        | Interface                                                                                                              | Description                                                                  |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `freespace_segmentation/mask_in` | [stereo_msgs/DisparityImage](https://github.com/ros2/common_interfaces/blob/humble/stereo_msgs/msg/DisparityImage.msg) | The input disparity image, with pixels corresponding to ground labelled as 0 |
-
-> **Limitation:** For all input images, both the height and width must be an even number of pixels.
-
-#### ROS Topics Published
-
-| ROS Topic                               | Interface                                                                                                      | Description                                               |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `freespace_segmentation/occupancy_grid` | [nav_msgs/OccupancyGrid](https://github.com/ros2/common_interfaces/blob/humble/nav_msgs/msg/OccupancyGrid.msg) | The output occupancy grid, with cells marked as 0 if free |
+| `bi3d_node/bi3d_disparity_values` | [isaac_ros_bi3d_interfaces/Bi3DInferenceParametersArray](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/blob/main/isaac_ros_bi3d_interfaces/msg/Bi3DInferenceParametersArray.msg) | The disparity values used for Bi3D inference. The timestamp is matched to the timestamp in the correpsonding output image from  `bi3d_node/bi3d_output`                                                                                                                                                           |
 
 ## Troubleshooting
 
@@ -367,8 +326,8 @@ Check [here](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_dnn_inference/blob/ma
 
 ## Updates
 
-| Date       | Changes                                                                                |
-| ---------- | -------------------------------------------------------------------------------------- |
-| 2022-10-19 | Add Freespace Segmentation functionality to produce occupancy grids from Bi3D's output |
-| 2022-08-31 | Update to use latest model and to be compatible with JetPack 5.0.2                     |
-| 2022-06-30 | Initial release                                                                        |
+| Date       | Changes                                                            |
+| ---------- | ------------------------------------------------------------------ |
+| 2023-04-05 | Source available GXF extensions                                    |
+| 2022-08-31 | Update to use latest model and to be compatible with JetPack 5.0.2 |
+| 2022-06-30 | Initial release                                                    |

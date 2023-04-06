@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-// Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ NITROS_FORMAT_ADD(nitros_bi3d_inference_param_array_t)
 NITROS_FORMAT_FACTORY_END()
 // Required extensions
 NITROS_TYPE_EXTENSION_FACTORY_BEGIN()
-NITROS_TYPE_EXTENSION_ADD("isaac_ros_nitros", "gxf/std/libgxf_std.so")
+NITROS_TYPE_EXTENSION_ADD("isaac_ros_gxf", "gxf/lib/std/libgxf_std.so")
 NITROS_TYPE_EXTENSION_FACTORY_END()
 NITROS_TYPE_FACTORY_END()
 
