@@ -26,9 +26,9 @@ This package is powered by [NVIDIA Isaac Transport for ROS (NITROS)](https://dev
 
 The following table summarizes the per-platform performance statistics of sample graphs that use this package, with links included to the full benchmark output. These benchmark configurations are taken from the [Isaac ROS Benchmark](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark#list-of-isaac-ros-benchmarks) collection, based on the [`ros2_benchmark`](https://github.com/NVIDIA-ISAAC-ROS/ros2_benchmark) framework.
 
-| Sample Graph                                                                                                                             | Input Size | AGX Orin                                                                                                                                 | Orin NX                                                                                                                                 | x86_64 w/ RTX 3060 Ti                                                                                                                            |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Proximity Segmentation Node](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/scripts//isaac_ros_bi3d_node.py) | 576p       | [45.9 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-agx_orin.json)<br>32 ms | [26.3 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-orin_nx.json)<br>65 ms | [148 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-x86_64_rtx_3060Ti.json)<br>22 ms |
+| Sample Graph                                                                                                                             | Input Size | AGX Orin                                                                                                                                 | Orin NX                                                                                                                                 | x86_64 w/ RTX 4060 Ti                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| [Proximity Segmentation Node](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/scripts//isaac_ros_bi3d_node.py) | 576p       | [49.3 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-agx_orin.json)<br>32 ms | [24.2 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-orin_nx.json)<br>65 ms | [159 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-nuc_4060ti.json)<br>23 ms |
 
 ## Table of Contents
 
@@ -66,7 +66,7 @@ The following table summarizes the per-platform performance statistics of sample
 
 ## Latest Update
 
-Update 2023-04-05: Source available GXF extensions
+Update 2023-05-25: Performance improvements.
 
 ## Supported Platforms
 
@@ -328,6 +328,7 @@ Check [here](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_dnn_inference/blob/ma
 
 | Date       | Changes                                                            |
 | ---------- | ------------------------------------------------------------------ |
+| 2023-05-25 | Performance improvements                                           |
 | 2023-04-05 | Source available GXF extensions                                    |
 | 2022-08-31 | Update to use latest model and to be compatible with JetPack 5.0.2 |
 | 2022-06-30 | Initial release                                                    |

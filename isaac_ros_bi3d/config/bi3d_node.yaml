@@ -1,6 +1,6 @@
 %YAML 1.2
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -252,7 +252,7 @@ components:
     featnet_engine_file_path: "featnet_engine_file_path"
     featnet_input_layers_name: ["input.1"]
     featnet_output_layers_name: ["97"]
-  
+
     segnet_engine_file_path: "segnet_engine_file_path"
     segnet_input_layers_name: ["input.1"]
     segnet_output_layers_name: ["278"]
@@ -306,7 +306,7 @@ components:
   type: nvidia::gxf::BlockMemoryPool
   parameters:
     storage_type: 1
-    block_size: 2211840 
+    block_size: 2211840
     num_blocks: 12
 - name: forward_pool
   type: nvidia::gxf::BlockMemoryPool
@@ -348,7 +348,7 @@ components:
     featnet_engine_file_path: "featnet_engine_file_path"
     featnet_input_layers_name: ["input.1"]
     featnet_output_layers_name: ["97"]
-  
+
     segnet_engine_file_path: "segnet_engine_file_path"
     segnet_input_layers_name: ["input.1"]
     segnet_output_layers_name: ["278"]
@@ -408,7 +408,7 @@ components:
   parameters:
     rx: rx
     tx: tx
---- 
+---
 name: bi3d_postprocess
 components:
 - name: pool
@@ -442,7 +442,7 @@ components:
     disparity_tensor_name: "disparity"
     disparity_values_tensor_name: "bi3d_inference_disparities"
 ---
-name: bi3d_output_vault
+name: bi3d_output_sink
 components:
 - name: input
   type: nvidia::gxf::DoubleBufferReceiver
@@ -453,12 +453,10 @@ components:
   parameters:
     receiver: input
     min_size: 1
-- name: vault
-  type: nvidia::gxf::Vault
+- name: sink
+  type: nvidia::isaac_ros::MessageRelay
   parameters:
     source: input
-    max_waiting_count: 1
-    drop_waiting: false
 ---
 components:
 - name: connection
@@ -556,7 +554,7 @@ components:
   type: nvidia::gxf::Connection
   parameters:
     source: bi3d_postprocess/data_transmitter
-    target: bi3d_output_vault/input
+    target: bi3d_output_sink/input
 ---
 name: scheduler
 components:
@@ -567,4 +565,3 @@ components:
     clock: clock
     worker_thread_number: 8
     stop_on_deadlock: false
-
