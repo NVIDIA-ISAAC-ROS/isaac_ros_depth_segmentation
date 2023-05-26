@@ -51,7 +51,7 @@ constexpr char INPUT_RIGHT_IMAGE_TOPIC_NAME[] = "right_image_bi3d";
 
 constexpr char INPUT_DISPARITY_COMPONENT_KEY[] = "disparity_roundrobin/data_receiver";
 
-constexpr char OUTPUT_BI3D_KEY[] = "bi3d_output_vault/vault";
+constexpr char OUTPUT_BI3D_KEY[] = "bi3d_output_sink/sink";
 constexpr char OUTPUT_BI3D_DEFAULT_TENSOR_FORMAT[] = "nitros_disparity_image_32FC1";
 constexpr char OUTPUT_BI3D_TOPIC_NAME[] = "bi3d_node/bi3d_output";
 

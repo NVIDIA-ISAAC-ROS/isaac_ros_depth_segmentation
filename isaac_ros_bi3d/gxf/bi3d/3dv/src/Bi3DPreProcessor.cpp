@@ -30,7 +30,7 @@
 
 namespace cvcore { namespace bi3d {
 
-struct Bi3DPreProcessor::Bi3DPreProcessorImpl
+struct Bi3DPreProcessor::Bi3DPreProcessorImpl 
 {
     mutable detail::InputImage m_leftImageDevice;
     mutable detail::InputImage m_rightImageDevice;
@@ -46,7 +46,7 @@ struct Bi3DPreProcessor::Bi3DPreProcessorImpl
     ImagePreProcessingParams m_preProcessorParams;
     ModelInputParams m_modelParams;
 
-    Bi3DPreProcessorImpl(const ImagePreProcessingParams & preProcessorParams,
+    Bi3DPreProcessorImpl(const ImagePreProcessingParams & preProcessorParams, 
                          const ModelInputParams & modelInputParams,
                          cudaStream_t stream)
         : m_preProcessorParams{preProcessorParams},
@@ -82,7 +82,7 @@ struct Bi3DPreProcessor::Bi3DPreProcessorImpl
 // Bi3D Frontend
 // =============================================================================
 
-Bi3DPreProcessor::Bi3DPreProcessor(const ImagePreProcessingParams & preProcessorParams,
+Bi3DPreProcessor::Bi3DPreProcessor(const ImagePreProcessingParams & preProcessorParams, 
                                    const ModelInputParams & modelInputParams,
                                    cudaStream_t stream)
   : m_pImpl{new Bi3DPreProcessorImpl(preProcessorParams, modelInputParams, stream)} {}
@@ -107,6 +107,7 @@ void Bi3DPreProcessor::execute(detail::PreprocessedImage & preprocessedLeftImage
     m_pImpl->resizeBuffers(leftImage.getWidth(), leftImage.getHeight());
 
     // Ensuring data is on the GPU
+    // FIXME: Rename so this is not confused with cvcore::Copy
     Copy(m_pImpl->m_leftImageDevice, leftImage, stream);
     Copy(m_pImpl->m_rightImageDevice, rightImage, stream);
 
@@ -144,6 +145,7 @@ void Bi3DPreProcessor::execute(detail::PreprocessedImage & preprocessedLeftImage
     // Ensuring the buffers are appropreately allocated
     m_pImpl->resizeBuffers(leftImage.getWidth(), leftImage.getHeight());
 
+    // FIXME: Rename so this is not confused with cvcore::Copy
     Copy(m_pImpl->m_preLeftImageDevice, leftImage, stream);
     Copy(m_pImpl->m_preRightImageDevice, rightImage, stream);
 
