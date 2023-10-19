@@ -25,6 +25,14 @@ from launch_ros.descriptions import ComposableNode
 def generate_launch_description():
     launch_args = [
         DeclareLaunchArgument(
+            'image_height',
+            default_value='576',
+            description='The height of the input image'),
+        DeclareLaunchArgument(
+            'image_width',
+            default_value='960',
+            description='The width of the input image'),
+        DeclareLaunchArgument(
             'featnet_engine_file_path',
             default_value='',
             description='The absolute path to the Bi3D Featnet TensorRT engine plan'),
@@ -39,6 +47,8 @@ def generate_launch_description():
     ]
 
     # Bi3DNode parameters
+    image_height = LaunchConfiguration('image_height')
+    image_width = LaunchConfiguration('image_width')
     featnet_engine_file_path = LaunchConfiguration('featnet_engine_file_path')
     segnet_engine_file_path = LaunchConfiguration('segnet_engine_file_path')
     max_disparity_values = LaunchConfiguration('max_disparity_values')
@@ -48,11 +58,15 @@ def generate_launch_description():
         package='isaac_ros_bi3d',
         plugin='nvidia::isaac_ros::bi3d::Bi3DNode',
         parameters=[{
+                'image_height': image_height,
+                'image_width': image_width,
                 'featnet_engine_file_path': featnet_engine_file_path,
                 'segnet_engine_file_path': segnet_engine_file_path,
                 'max_disparity_values': max_disparity_values}],
         remappings=[('left_image_bi3d', 'rgb_left'),
-                    ('right_image_bi3d', 'rgb_right')]
+                    ('right_image_bi3d', 'rgb_right'),
+                    ('left_camera_info_bi3d', 'camera_info_left'),
+                    ('right_camera_info_bi3d', 'camera_info_right')]
         )
 
     container = ComposableNodeContainer(

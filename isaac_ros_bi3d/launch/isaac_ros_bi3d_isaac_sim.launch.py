@@ -46,6 +46,38 @@ def generate_launch_description():
     segnet_engine_file_path = LaunchConfiguration('segnet_engine_file_path')
     max_disparity_values = LaunchConfiguration('max_disparity_values')
 
+    image_resize_node_right = ComposableNode(
+        package='isaac_ros_image_proc',
+        plugin='nvidia::isaac_ros::image_proc::ResizeNode',
+        name='image_resize_node_right',
+        parameters=[{
+                'output_width': 960,
+                'output_height': 576,
+                'encoding_desired': 'rgb8',
+        }],
+        remappings=[
+            ('camera_info', 'front_stereo_camera/right_rgb/camerainfo'),
+            ('image', 'front_stereo_camera/right_rgb/image_raw'),
+            ('resize/camera_info', 'front_stereo_camera/right_rgb/camerainfo_resize'),
+            ('resize/image', 'front_stereo_camera/right_rgb/image_resize')]
+    )
+
+    image_resize_node_left = ComposableNode(
+        package='isaac_ros_image_proc',
+        plugin='nvidia::isaac_ros::image_proc::ResizeNode',
+        name='image_resize_node_left',
+        parameters=[{
+                'output_width': 960,
+                'output_height': 576,
+                'encoding_desired': 'rgb8',
+        }],
+        remappings=[
+            ('camera_info', 'front_stereo_camera/left_rgb/camerainfo'),
+            ('image', 'front_stereo_camera/left_rgb/image_raw'),
+            ('resize/camera_info', 'front_stereo_camera/left_rgb/camerainfo_resize'),
+            ('resize/image', 'front_stereo_camera/left_rgb/image_resize')]
+    )
+
     bi3d_node = ComposableNode(
         name='bi3d_node',
         package='isaac_ros_bi3d',
@@ -54,20 +86,25 @@ def generate_launch_description():
                 'featnet_engine_file_path': featnet_engine_file_path,
                 'segnet_engine_file_path': segnet_engine_file_path,
                 'max_disparity_values': max_disparity_values,
-                'disparity_values': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60]}],
-        remappings=[('left_image_bi3d', 'rgb_left'),
-                    ('right_image_bi3d', 'rgb_right')])
+                'disparity_values': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60],
+                'image_width': 960,
+                'image_height': 576
+                }],
+        remappings=[('left_image_bi3d', 'front_stereo_camera/left_rgb/image_resize'),
+                    ('left_camera_info_bi3d', 'front_stereo_camera/left_rgb/camerainfo_resize'),
+                    ('right_image_bi3d', 'front_stereo_camera/right_rgb/image_resize'),
+                    ('right_camera_info_bi3d', 'front_stereo_camera/right_rgb/camerainfo_resize')])
 
     pointcloud_node = ComposableNode(
         package='isaac_ros_stereo_image_proc',
         plugin='nvidia::isaac_ros::stereo_image_proc::PointCloudNode',
         parameters=[{
             'use_color': True,
-            'unit_scaling': 1.0
+            'unit_scaling': 0.3
         }],
-        remappings=[('left/image_rect_color', 'rgb_left'),
-                    ('left/camera_info', 'camera_info_left'),
-                    ('right/camera_info', 'camera_info_right'),
+        remappings=[('left/image_rect_color', 'front_stereo_camera/left_rgb/image_resize'),
+                    ('left/camera_info', 'front_stereo_camera/left_rgb/camerainfo_resize'),
+                    ('right/camera_info', 'front_stereo_camera/right_rgb/camerainfo_resize'),
                     ('disparity', 'bi3d_node/bi3d_output')])
 
     container = ComposableNodeContainer(
@@ -75,7 +112,8 @@ def generate_launch_description():
         namespace='bi3d',
         package='rclcpp_components',
         executable='component_container_mt',
-        composable_node_descriptions=[bi3d_node, pointcloud_node],
+        composable_node_descriptions=[bi3d_node, pointcloud_node,
+                                      image_resize_node_left, image_resize_node_right],
         output='screen'
     )
 

@@ -28,6 +28,7 @@
 #include "isaac_ros_nitros_bi3d_inference_param_array_type/nitros_bi3d_inference_param_array.hpp"
 #include "isaac_ros_nitros_disparity_image_type/nitros_disparity_image.hpp"
 #include "isaac_ros_nitros_image_type/nitros_image.hpp"
+#include "isaac_ros_nitros_camera_info_type/nitros_camera_info.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
@@ -43,11 +44,16 @@ namespace bi3d
 using nvidia::gxf::optimizer::GraphIOGroupSupportedDataTypesInfoList;
 
 constexpr char INPUT_IMAGE_DEFAULT_TENSOR_FORMAT[] = "nitros_image_rgb8";
+constexpr char INPUT_CAM_INFO_DEFAULT_TENSOR_FORMAT[] = "nitros_camera_info";
 
-constexpr char INPUT_LEFT_IMAGE_COMPONENT_KEY[] = "sync/data_receiver_left";
+constexpr char INPUT_LEFT_IMAGE_COMPONENT_KEY[] = "sync/left_image_receiver";
 constexpr char INPUT_LEFT_IMAGE_TOPIC_NAME[] = "left_image_bi3d";
-constexpr char INPUT_RIGHT_IMAGE_COMPONENT_KEY[] = "sync/data_receiver_right";
+constexpr char INPUT_RIGHT_IMAGE_COMPONENT_KEY[] = "sync/right_image_receiver";
 constexpr char INPUT_RIGHT_IMAGE_TOPIC_NAME[] = "right_image_bi3d";
+constexpr char INPUT_LEFT_CAM_INFO_COMPONENT_KEY[] = "sync/left_cam_receiver";
+constexpr char INPUT_LEFT_CAM_INFO_TOPIC_NAME[] = "left_camera_info_bi3d";
+constexpr char INPUT_RIGHT_CAM_INFO_COMPONENT_KEY[] = "sync/right_cam_receiver";
+constexpr char INPUT_RIGHT_CAM_INFO_TOPIC_NAME[] = "right_camera_info_bi3d";
 
 constexpr char INPUT_DISPARITY_COMPONENT_KEY[] = "disparity_roundrobin/data_receiver";
 
@@ -58,19 +64,18 @@ constexpr char OUTPUT_BI3D_TOPIC_NAME[] = "bi3d_node/bi3d_output";
 constexpr char APP_YAML_FILENAME[] = "config/bi3d_node.yaml";
 constexpr char PACKAGE_NAME[] = "isaac_ros_bi3d";
 
-const uint64_t BI3D_BLOCK_SIZE = 2211840;
-
 const std::vector<std::pair<std::string, std::string>> EXTENSIONS = {
   {"isaac_ros_gxf", "gxf/lib/std/libgxf_std.so"},
   {"isaac_ros_gxf", "gxf/lib/cuda/libgxf_cuda.so"},
   {"isaac_ros_gxf", "gxf/lib/multimedia/libgxf_multimedia.so"},
   {"isaac_ros_gxf", "gxf/lib/libgxf_synchronization.so"},
-  {"isaac_ros_bi3d", "gxf/lib/bi3d/libgxf_cvcore_bi3d.so"},
-  {"isaac_ros_bi3d", "gxf/lib/bi3d/libgxf_bi3d_postprocessor.so"}
+  {"isaac_ros_stereo_image_proc", "gxf/lib/sgm_disparity/libgxf_sgm.so"},
+  {"isaac_ros_bi3d", "gxf/lib/bi3d/libgxf_cvcore_bi3d.so"}
 };
 const std::vector<std::string> PRESET_EXTENSION_SPEC_NAMES = {
   "isaac_ros_bi3d",
 };
+
 const std::vector<std::string> EXTENSION_SPEC_FILENAMES = {};
 const std::vector<std::string> GENERATOR_RULE_FILENAMES = {};
 #pragma GCC diagnostic push
@@ -90,6 +95,22 @@ const nitros::NitrosPublisherSubscriberConfigMap CONFIG_MAP = {
       .qos = rclcpp::QoS(10),
       .compatible_data_format = INPUT_IMAGE_DEFAULT_TENSOR_FORMAT,
       .topic_name = INPUT_RIGHT_IMAGE_TOPIC_NAME,
+    }
+  },
+  {INPUT_LEFT_CAM_INFO_COMPONENT_KEY,
+    {
+      .type = nitros::NitrosPublisherSubscriberType::NEGOTIATED,
+      .qos = rclcpp::QoS(10),
+      .compatible_data_format = INPUT_CAM_INFO_DEFAULT_TENSOR_FORMAT,
+      .topic_name = INPUT_LEFT_CAM_INFO_TOPIC_NAME,
+    }
+  },
+  {INPUT_RIGHT_CAM_INFO_COMPONENT_KEY,
+    {
+      .type = nitros::NitrosPublisherSubscriberType::NEGOTIATED,
+      .qos = rclcpp::QoS(10),
+      .compatible_data_format = INPUT_CAM_INFO_DEFAULT_TENSOR_FORMAT,
+      .topic_name = INPUT_RIGHT_CAM_INFO_TOPIC_NAME,
     }
   },
   {INPUT_DISPARITY_COMPONENT_KEY,
@@ -175,6 +196,10 @@ Bi3DNode::Bi3DNode(const rclcpp::NodeOptions & options)
     EXTENSIONS,
     PACKAGE_NAME),
 
+  // Image parameters
+  image_height_(declare_parameter<uint16_t>("image_height", 576)),
+  image_width_(declare_parameter<uint16_t>("image_width", 960)),
+
   // Bi3D model input parameters
   featnet_engine_file_path_(declare_parameter<std::string>(
       "featnet_engine_file_path",
@@ -198,7 +223,7 @@ Bi3DNode::Bi3DNode(const rclcpp::NodeOptions & options)
   // Bi3D extra parameters
   max_disparity_values_(declare_parameter<int64_t>("max_disparity_values", 64)),
   disparity_values_(declare_parameter<std::vector<int64_t>>(
-      "disparity_values", {10, 20, 30, 40, 50, 60}))
+      "disparity_values", {5, 10, 15, 20, 25, 30}))
 {
   RCLCPP_DEBUG(get_logger(), "[Bi3DNode] Initializing Bi3DNode");
 
@@ -229,6 +254,7 @@ Bi3DNode::Bi3DNode(const rclcpp::NodeOptions & options)
   registerSupportedType<nvidia::isaac_ros::nitros::NitrosBi3DInferenceParamArray>();
   registerSupportedType<nvidia::isaac_ros::nitros::NitrosDisparityImage>();
   registerSupportedType<nvidia::isaac_ros::nitros::NitrosImage>();
+  registerSupportedType<nvidia::isaac_ros::nitros::NitrosCameraInfo>();
 
   // This callback will get triggered when there is an attempt to change the parameter
   auto param_change_callback =
@@ -281,54 +307,86 @@ Bi3DNode::Bi3DNode(const rclcpp::NodeOptions & options)
   startNitrosNode();
 }
 
-void Bi3DNode::preLoadGraphCallback() {}
+void Bi3DNode::preLoadGraphCallback()
+{
+  RCLCPP_INFO(get_logger(), "In Bi3D Node preLoadGraphCallback().");
+
+  // Assemble disparity values string
+  std::string disparity_values_str = "[";
+  for (unsigned int i = 0; i < disparity_values_.size(); i++) {
+    disparity_values_str = disparity_values_str + std::to_string(disparity_values_[i]) + ",";
+  }
+  disparity_values_str.pop_back();
+  disparity_values_str = disparity_values_str + "]";
+
+  // Set disparity values string as parameter in Bi3D postprocessor
+  NitrosNode::preLoadGraphSetParameter(
+    "bi3d_postprocess",
+    "nvidia::isaac::bi3d::Bi3DPostprocessor",
+    "disparity_values",
+    disparity_values_str);
+}
 
 void Bi3DNode::postLoadGraphCallback()
 {
   // Foward Bi3DNode parameters to GXF component
   // Bi3D model input parameters
   getNitrosContext().setParameterStr(
-    "bi3d_dla0", "nvidia::cvcore::Bi3D", "featnet_engine_file_path", featnet_engine_file_path_);
+    "bi3d_dla0", "nvidia::isaac::Bi3DInference", "featnet_engine_file_path",
+    featnet_engine_file_path_);
   getNitrosContext().setParameter1DStrVector(
-    "bi3d_dla0", "nvidia::cvcore::Bi3D", "featnet_input_layers_name", featnet_input_layers_name_);
+    "bi3d_dla0", "nvidia::isaac::Bi3DInference", "featnet_input_layers_name",
+    featnet_input_layers_name_);
   getNitrosContext().setParameter1DStrVector(
-    "bi3d_dla0", "nvidia::cvcore::Bi3D", "featnet_output_layers_name", featnet_output_layers_name_);
+    "bi3d_dla0", "nvidia::isaac::Bi3DInference", "featnet_output_layers_name",
+    featnet_output_layers_name_);
   getNitrosContext().setParameterStr(
-    "bi3d_dla1", "nvidia::cvcore::Bi3D", "featnet_engine_file_path", featnet_engine_file_path_);
+    "bi3d_dla1", "nvidia::isaac::Bi3DInference", "featnet_engine_file_path",
+    featnet_engine_file_path_);
   getNitrosContext().setParameter1DStrVector(
-    "bi3d_dla1", "nvidia::cvcore::Bi3D", "featnet_input_layers_name", featnet_input_layers_name_);
+    "bi3d_dla1", "nvidia::isaac::Bi3DInference", "featnet_input_layers_name",
+    featnet_input_layers_name_);
   getNitrosContext().setParameter1DStrVector(
-    "bi3d_dla1", "nvidia::cvcore::Bi3D", "featnet_output_layers_name", featnet_output_layers_name_);
+    "bi3d_dla1", "nvidia::isaac::Bi3DInference", "featnet_output_layers_name",
+    featnet_output_layers_name_);
 
   getNitrosContext().setParameterStr(
-    "bi3d_dla0", "nvidia::cvcore::Bi3D", "segnet_engine_file_path", segnet_engine_file_path_);
+    "bi3d_dla0", "nvidia::isaac::Bi3DInference", "segnet_engine_file_path",
+    segnet_engine_file_path_);
   getNitrosContext().setParameter1DStrVector(
-    "bi3d_dla0", "nvidia::cvcore::Bi3D", "segnet_input_layers_name", segnet_input_layers_name_);
+    "bi3d_dla0", "nvidia::isaac::Bi3DInference", "segnet_input_layers_name",
+    segnet_input_layers_name_);
   getNitrosContext().setParameter1DStrVector(
-    "bi3d_dla0", "nvidia::cvcore::Bi3D", "segnet_output_layers_name", segnet_output_layers_name_);
+    "bi3d_dla0", "nvidia::isaac::Bi3DInference", "segnet_output_layers_name",
+    segnet_output_layers_name_);
   getNitrosContext().setParameterStr(
-    "bi3d_dla1", "nvidia::cvcore::Bi3D", "segnet_engine_file_path", segnet_engine_file_path_);
+    "bi3d_dla1", "nvidia::isaac::Bi3DInference", "segnet_engine_file_path",
+    segnet_engine_file_path_);
   getNitrosContext().setParameter1DStrVector(
-    "bi3d_dla1", "nvidia::cvcore::Bi3D", "segnet_input_layers_name", segnet_input_layers_name_);
+    "bi3d_dla1", "nvidia::isaac::Bi3DInference", "segnet_input_layers_name",
+    segnet_input_layers_name_);
   getNitrosContext().setParameter1DStrVector(
-    "bi3d_dla1", "nvidia::cvcore::Bi3D", "segnet_output_layers_name", segnet_output_layers_name_);
+    "bi3d_dla1", "nvidia::isaac::Bi3DInference", "segnet_output_layers_name",
+    segnet_output_layers_name_);
 
   // Set max allowed number of disparity values
   getNitrosContext().setParameterUInt64(
-    "bi3d_dla0", "nvidia::cvcore::Bi3D", "max_disparity_values", max_disparity_values_);
+    "bi3d_dla0", "nvidia::isaac::Bi3DInference", "max_disparity_values",
+    max_disparity_values_);
   getNitrosContext().setParameterUInt64(
-    "bi3d_dla1", "nvidia::cvcore::Bi3D", "max_disparity_values", max_disparity_values_);
+    "bi3d_dla1", "nvidia::isaac::Bi3DInference", "max_disparity_values",
+    max_disparity_values_);
 
   // Set Bi3D block memory size depending on maximum number of output disparities
   getNitrosContext().setParameterUInt64(
     "bi3d_dla0", "nvidia::gxf::BlockMemoryPool", "block_size",
-    BI3D_BLOCK_SIZE * max_disparity_values_);
+    4 * image_width_ * image_height_ * disparity_values_.size());
   getNitrosContext().setParameterUInt64(
     "bi3d_dla1", "nvidia::gxf::BlockMemoryPool", "block_size",
-    BI3D_BLOCK_SIZE * max_disparity_values_);
+    4 * image_width_ * image_height_ * disparity_values_.size());
   getNitrosContext().setParameterUInt64(
     "bi3d_postprocess", "nvidia::gxf::BlockMemoryPool", "block_size",
-    BI3D_BLOCK_SIZE * max_disparity_values_);
+    4 * image_width_ * image_height_ * disparity_values_.size());
 
   RCLCPP_INFO(
     get_logger(), "[Bi3DNode] Setting featnet_engine_file_path: %s.",

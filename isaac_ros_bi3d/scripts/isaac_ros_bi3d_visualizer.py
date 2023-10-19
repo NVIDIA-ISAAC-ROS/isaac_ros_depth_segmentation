@@ -45,7 +45,7 @@ def get_args():
                         help='Topic name for disparity output.')
     parser.add_argument('--rosbag_path',
                         default='/workspaces/isaac_ros-dev/src/'
-                                'isaac_ros_proximity_segmentation/resources/'
+                                'isaac_ros_depth_segmentation/resources/'
                                 'rosbags/bi3dnode_rosbag',
                         help='Absolute path to your rosbag.')
     args = parser.parse_args()

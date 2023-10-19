@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "rclcpp/rclcpp/parameter_event_handler.hpp"
+#include "rclcpp/parameter_event_handler.hpp"
 #include "isaac_ros_nitros/nitros_node.hpp"
 
 namespace nvidia
@@ -52,6 +52,10 @@ public:
     const gxf_context_t, nitros::NitrosTypeBase &, std::string name, bool pub_disp_values);
 
 private:
+  // Image parameters
+  const uint16_t image_height_;
+  const uint16_t image_width_;
+
   // Bi3D model input paramters
   const std::string featnet_engine_file_path_;
   const std::vector<std::string> featnet_input_layers_name_;
