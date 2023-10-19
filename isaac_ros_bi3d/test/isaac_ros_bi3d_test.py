@@ -19,7 +19,7 @@ import os
 import subprocess
 import time
 
-from isaac_ros_test import IsaacROSBaseTest
+from isaac_ros_test import IsaacROSBaseTest, JSONConversion
 
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
@@ -27,7 +27,7 @@ from launch_ros.descriptions import ComposableNode
 import pytest
 import rclpy
 
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CameraInfo, Image
 from stereo_msgs.msg import DisparityImage
 
 
@@ -106,6 +106,7 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
     GXF_WAIT_SEC = 10
     FEATNET_ENGINE_FILE_PATH = '/tmp/dummy_bi3dnet_featnet.engine'
     SEGNET_ENGINE_FILE_PATH = '/tmp/dummy_bi3dnet_segnet.engine'
+    CAMERA_INFO_PATH = os.path.dirname(os.path.realpath(__file__)) + '/camera_info.json'
 
     def _create_image(self, name):
         image = Image()
@@ -134,7 +135,8 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
         received_messages = {}
 
         self.generate_namespace_lookup(
-            ['left_image_bi3d', 'right_image_bi3d', 'bi3d_node/bi3d_output'])
+            ['left_image_bi3d', 'right_image_bi3d', 'left_camera_info_bi3d',
+             'right_camera_info_bi3d', 'bi3d_node/bi3d_output'])
 
         subs = self.create_logging_subscribers(
             [('bi3d_node/bi3d_output', DisparityImage)], received_messages)
@@ -145,10 +147,17 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
         image_right_pub = self.node.create_publisher(
             Image, self.namespaces['right_image_bi3d'], self.DEFAULT_QOS
         )
+        camera_info_left = self.node.create_publisher(
+            CameraInfo, self.namespaces['left_camera_info_bi3d'], self.DEFAULT_QOS
+        )
+        camera_info_right = self.node.create_publisher(
+            CameraInfo, self.namespaces['right_camera_info_bi3d'], self.DEFAULT_QOS
+        )
 
         try:
             left_image = self._create_image('left_image')
             right_image = self._create_image('right_image')
+            camera_info = JSONConversion.load_camera_info_from_json(self.CAMERA_INFO_PATH)
 
             end_time = time.time() + self.TIMEOUT
             done = False
@@ -156,6 +165,8 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
             while time.time() < end_time:
                 image_left_pub.publish(left_image)
                 image_right_pub.publish(right_image)
+                camera_info_left.publish(camera_info)
+                camera_info_right.publish(camera_info)
 
                 rclpy.spin_once(self.node, timeout_sec=0.1)
 
@@ -164,10 +175,12 @@ class IsaacROSBi3DTest(IsaacROSBaseTest):
                     break
             self.assertTrue(done, 'Didnt recieve output on bi3d_node/bi3d_output topic')
 
-            disparity = received_messages['bi3d_node/bi3d_output']
-            self.assertEqual(disparity.image.encoding, '32FC1')
-            self.assertEqual(disparity.image.height, self.IMAGE_HEIGHT)
-            self.assertEqual(disparity.image.width, self.IMAGE_WIDTH)
+            bi3d_output = received_messages['bi3d_node/bi3d_output']
+            self.assertEqual(bi3d_output.image.encoding, '32FC1')
+            self.assertEqual(bi3d_output.image.height, self.IMAGE_HEIGHT)
+            self.assertEqual(bi3d_output.image.width, self.IMAGE_WIDTH)
+            self.assertAlmostEqual(bi3d_output.f, 434.9440002)
+            self.assertAlmostEqual(bi3d_output.t, -0.3678634)
 
         finally:
             [self.node.destroy_subscription(sub) for sub in subs]

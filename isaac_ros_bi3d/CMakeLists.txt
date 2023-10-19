@@ -15,7 +15,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_minimum_required(VERSION 3.23.2)
+cmake_minimum_required(VERSION 3.22.1)
 project(isaac_ros_bi3d LANGUAGES C CXX)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -33,12 +33,8 @@ set(node_plugins "${node_plugins}nvidia::isaac_ros::bi3d::Bi3DNode;$<TARGET_FILE
 ### Install extensions built from source
 
 # Bi3d
-add_subdirectory(gxf/bi3d)
+add_subdirectory(gxf)
 install(TARGETS gxf_cvcore_bi3d DESTINATION share/${PROJECT_NAME}/gxf/lib/bi3d)
-
-# Bi3d postprocessor
-add_subdirectory(gxf/bi3d_postprocessor)
-install(TARGETS gxf_bi3d_postprocessor DESTINATION share/${PROJECT_NAME}/gxf/lib/bi3d)
 
 ### End extensions
 
@@ -47,6 +43,12 @@ install(PROGRAMS scripts/isaac_ros_bi3d_visualizer.py DESTINATION lib/${PROJECT_
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+
+
+  # The FindPythonInterp and FindPythonLibs modules are removed
+  if(POLICY CMP0148)
+    cmake_policy(SET CMP0148 OLD)
+  endif()
 
   find_package(launch_testing_ament_cmake REQUIRED)
   add_launch_test(test/isaac_ros_bi3d_test.py TIMEOUT "1000")

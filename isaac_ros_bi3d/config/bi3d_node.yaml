@@ -18,47 +18,92 @@
 ---
 name: sync
 components:
-- name: data_receiver_left
+- name: left_image_receiver
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
     capacity: 12
     policy: 0
 - type: nvidia::gxf::MessageAvailableSchedulingTerm
   parameters:
-    receiver: data_receiver_left
+    receiver: left_image_receiver
     min_size: 1
-- name: data_receiver_right
+- name: right_image_receiver
   type: nvidia::gxf::DoubleBufferReceiver
   parameters:
     capacity: 12
     policy: 0
 - type: nvidia::gxf::MessageAvailableSchedulingTerm
   parameters:
-    receiver: data_receiver_right
+    receiver: right_image_receiver
+    min_size: 1
+- name: data_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 12
+    policy: 0
+- name: left_cam_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 12
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: left_cam_receiver
+    min_size: 1
+- name: right_cam_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 12
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: right_cam_receiver
     min_size: 1
 - type: nvidia::isaac_ros::Synchronization
   parameters:
-    left_input_placeholder: data_receiver_left
-    left_output_placeholder: left_data_transmitter
-    right_input_placeholder: data_receiver_right
-    right_output_placeholder: right_data_transmitter
-    inputs: [data_receiver_left, data_receiver_right]
-    outputs: [left_data_transmitter, right_data_transmitter]
-- name: left_data_transmitter
+    left_image_input: left_image_receiver
+    right_image_input: right_image_receiver
+    left_cam_input: left_cam_receiver
+    right_cam_input: right_cam_receiver
+    left_image_output: left_image_transmitter
+    right_image_output: right_image_transmitter
+    left_cam_output: left_cam_transmitter
+    right_cam_output: right_cam_transmitter
+    inputs: [left_image_receiver, right_image_receiver, left_cam_receiver, right_cam_receiver]
+    outputs: [left_image_transmitter, right_image_transmitter, left_cam_transmitter, right_cam_transmitter]
+- name: left_image_transmitter
   type: nvidia::gxf::DoubleBufferTransmitter
   parameters:
-    capacity: 1
+    capacity: 12
+    policy: 0
 - type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
   parameters:
-    transmitter: left_data_transmitter
+    transmitter: left_image_transmitter
     min_size: 1
-- name: right_data_transmitter
+- name: right_image_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 12
+    policy: 0
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: right_image_transmitter
+    min_size: 1
+- name: left_cam_transmitter
   type: nvidia::gxf::DoubleBufferTransmitter
   parameters:
     capacity: 1
 - type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
   parameters:
-    transmitter: right_data_transmitter
+    transmitter: left_cam_transmitter
+    min_size: 1
+- name: right_cam_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 12
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: right_cam_transmitter
     min_size: 1
 ---
 name: left_roundrobin
@@ -226,7 +271,7 @@ components:
     stream_priority: 0
     reserved_size: 1
     max_size: 1
-- type: nvidia::cvcore::Bi3D
+- type: nvidia::isaac::Bi3DInference
   parameters:
     left_image_name: "left_image"
     right_image_name: "right_image"
@@ -264,6 +309,7 @@ components:
     threshold_value_low: 0.0
     threshold_value_high: 1.0
     max_disparity_levels: 64
+    disparity_values: [18]
 ---
 name: bi3d_dla1
 components:
@@ -322,7 +368,7 @@ components:
     stream_priority: 0
     reserved_size: 1
     max_size: 1
-- type: nvidia::cvcore::Bi3D
+- type: nvidia::isaac::Bi3DInference
   parameters:
     left_image_name: "left_image"
     right_image_name: "right_image"
@@ -360,6 +406,7 @@ components:
     threshold_value_low: 0.0
     threshold_value_high: 1.0
     max_disparity_levels: 64
+    disparity_values: [18]
 ---
 name: sync_bi3d_dla0
 components:
@@ -434,13 +481,61 @@ components:
   parameters:
     transmitter: data_transmitter
     min_size: 1
-- type: nvidia::isaac_ros::Bi3DPostprocessor
+- type: nvidia::isaac::bi3d::Bi3DPostprocessor
   parameters:
     bi3d_receiver: data_receiver
     output_transmitter: data_transmitter
     pool: pool
     disparity_tensor_name: "disparity"
     disparity_values_tensor_name: "bi3d_inference_disparities"
+    disparity_values: [18]
+---
+name: disparity_compositor
+components:
+- name: disparity_in
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 2
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: disparity_in
+    min_size: 1
+- name: left_cam_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 2
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: left_cam_receiver
+    min_size: 1
+- name: right_cam_receiver
+  type: nvidia::gxf::DoubleBufferReceiver
+  parameters:
+    capacity: 2
+    policy: 0
+- type: nvidia::gxf::MessageAvailableSchedulingTerm
+  parameters:
+    receiver: right_cam_receiver
+    min_size: 1
+- name: data_transmitter
+  type: nvidia::gxf::DoubleBufferTransmitter
+  parameters:
+    capacity: 1
+    policy: 0
+- type: nvidia::gxf::DownstreamReceptiveSchedulingTerm
+  parameters:
+    transmitter: data_transmitter
+    min_size: 1
+- type: nvidia::isaac::DisparityCompositor
+  parameters:
+    left_camera_model_receiver: left_cam_receiver
+    right_camera_model_receiver: right_cam_receiver
+    disparity_receiver: disparity_in
+    output_transmitter: data_transmitter
+    min_disparity: 0
+    max_disparity: -1
 ---
 name: bi3d_output_sink
 components:
@@ -462,15 +557,29 @@ components:
 - name: connection
   type: nvidia::gxf::Connection
   parameters:
-    source: sync/left_data_transmitter
+    source: sync/left_image_transmitter
     target: left_roundrobin/data_receiver
 ---
 components:
 - name: connection
   type: nvidia::gxf::Connection
   parameters:
-    source: sync/right_data_transmitter
+    source: sync/right_image_transmitter
     target: right_roundrobin/data_receiver
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: sync/left_cam_transmitter
+    target: disparity_compositor/left_cam_receiver
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: sync/right_cam_transmitter
+    target: disparity_compositor/right_cam_receiver
 ---
 components:
 - name: connection
@@ -554,6 +663,13 @@ components:
   type: nvidia::gxf::Connection
   parameters:
     source: bi3d_postprocess/data_transmitter
+    target: disparity_compositor/disparity_in
+---
+components:
+- name: connection
+  type: nvidia::gxf::Connection
+  parameters:
+    source: disparity_compositor/data_transmitter
     target: bi3d_output_sink/input
 ---
 name: scheduler
