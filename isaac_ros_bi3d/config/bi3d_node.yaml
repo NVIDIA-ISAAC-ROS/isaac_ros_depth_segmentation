@@ -310,6 +310,14 @@ components:
     threshold_value_high: 1.0
     max_disparity_levels: 64
     disparity_values: [18]
+- type: nvidia::gxf::MemoryAvailableSchedulingTerm
+  parameters:
+    allocator: pool
+    min_blocks: 1
+- type: nvidia::gxf::MemoryAvailableSchedulingTerm
+  parameters:
+    allocator: forward_pool
+    min_blocks: 1
 ---
 name: bi3d_dla1
 components:
@@ -407,6 +415,14 @@ components:
     threshold_value_high: 1.0
     max_disparity_levels: 64
     disparity_values: [18]
+- type: nvidia::gxf::MemoryAvailableSchedulingTerm
+  parameters:
+    allocator: pool
+    min_blocks: 1
+- type: nvidia::gxf::MemoryAvailableSchedulingTerm
+  parameters:
+    allocator: forward_pool
+    min_blocks: 1
 ---
 name: sync_bi3d_dla0
 components:
@@ -489,6 +505,10 @@ components:
     disparity_tensor_name: "disparity"
     disparity_values_tensor_name: "bi3d_inference_disparities"
     disparity_values: [18]
+- type: nvidia::gxf::MemoryAvailableSchedulingTerm
+  parameters:
+    allocator: pool
+    min_blocks: 1
 ---
 name: disparity_compositor
 components:
