@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -89,11 +89,13 @@ def generate_launch_description():
                 'disparity_values': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60],
                 'image_width': 960,
                 'image_height': 576
-                }],
+        }],
         remappings=[('left_image_bi3d', 'front_stereo_camera/left_rgb/image_resize'),
-                    ('left_camera_info_bi3d', 'front_stereo_camera/left_rgb/camerainfo_resize'),
+                    ('left_camera_info_bi3d',
+                     'front_stereo_camera/left_rgb/camerainfo_resize'),
                     ('right_image_bi3d', 'front_stereo_camera/right_rgb/image_resize'),
-                    ('right_camera_info_bi3d', 'front_stereo_camera/right_rgb/camerainfo_resize')])
+                    ('right_camera_info_bi3d',
+                     'front_stereo_camera/right_rgb/camerainfo_resize')])
 
     pointcloud_node = ComposableNode(
         package='isaac_ros_stereo_image_proc',
@@ -103,8 +105,10 @@ def generate_launch_description():
             'unit_scaling': 0.3
         }],
         remappings=[('left/image_rect_color', 'front_stereo_camera/left_rgb/image_resize'),
-                    ('left/camera_info', 'front_stereo_camera/left_rgb/camerainfo_resize'),
-                    ('right/camera_info', 'front_stereo_camera/right_rgb/camerainfo_resize'),
+                    ('left/camera_info',
+                     'front_stereo_camera/left_rgb/camerainfo_resize'),
+                    ('right/camera_info',
+                     'front_stereo_camera/right_rgb/camerainfo_resize'),
                     ('disparity', 'bi3d_node/bi3d_output')])
 
     container = ComposableNodeContainer(

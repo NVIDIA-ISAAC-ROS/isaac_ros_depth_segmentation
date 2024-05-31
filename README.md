@@ -1,6 +1,6 @@
 # Isaac ROS Depth Segmentation
 
-Hardware-accelerated packages for depth segmentation.
+NVIDIA-accelerated packages for depth segmentation.
 
 <div align="center"><a class="reference internal image-reference" href="https://media.githubusercontent.com/media/NVIDIA-ISAAC-ROS/.github/main/resources/isaac_ros_docs/repositories_and_packages/isaac_ros_depth_segmentation/isaac_ros_bi3d_real_opt.gif/"><img alt="image" src="https://media.githubusercontent.com/media/NVIDIA-ISAAC-ROS/.github/main/resources/isaac_ros_docs/repositories_and_packages/isaac_ros_depth_segmentation/isaac_ros_bi3d_real_opt.gif/" width="500px"/></a></div>
 
@@ -14,7 +14,7 @@ Learn how to use this package by watching our on-demand webinar: [Using ML Model
 
 ### Overview
 
-[Isaac ROS Depth Segmentation](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_depth_segmentation) provides NVIDIA hardware-accelerated packages for
+[Isaac ROS Depth Segmentation](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_depth_segmentation) provides NVIDIA NVIDIA-accelerated packages for
 depth segmentation. The `isaac_ros_bi3d` package uses the
 optimized [Bi3D DNN
 model](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/isaac/models/bi3d_proximity_segmentation)
@@ -55,9 +55,9 @@ This package is powered by [NVIDIA Isaac Transport for ROS (NITROS)](https://dev
 
 ### Performance
 
-| Sample Graph<br/><br/>                                                                                                                          | Input Size<br/><br/>     | AGX Orin<br/><br/>                                                                                                                                    | Orin NX<br/><br/>                                                                                                                                    | x86_64 w/ RTX 4060 Ti<br/><br/>                                                                                                                         |
-|-------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Depth Segmentation Node](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/scripts/isaac_ros_bi3d_node.py)<br/><br/><br/><br/> | 576p<br/><br/><br/><br/> | [47.7 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-agx_orin.json)<br/><br/><br/>43 ms<br/><br/> | [30.0 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-orin_nx.json)<br/><br/><br/>98 ms<br/><br/> | [89.9 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-nuc_4060ti.json)<br/><br/><br/>28 ms<br/><br/> |
+| Sample Graph<br/><br/>                                                                                                                                                              | Input Size<br/><br/>     | AGX Orin<br/><br/>                                                                                                                                           | Orin NX<br/><br/>                                                                                                                                           | x86_64 w/ RTX 4060 Ti<br/><br/>                                                                                                                                |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Depth Segmentation Node](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/benchmarks/isaac_ros_bi3d_benchmark/scripts/isaac_ros_bi3d_node.py)<br/><br/><br/><br/> | 576p<br/><br/><br/><br/> | [45.9 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-agx_orin.json)<br/><br/><br/>76 ms @ 30Hz<br/><br/> | [28.8 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-orin_nx.json)<br/><br/><br/>92 ms @ 30Hz<br/><br/> | [87.9 fps](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark/blob/main/results/isaac_ros_bi3d_node-nuc_4060ti.json)<br/><br/><br/>35 ms @ 30Hz<br/><br/> |
 
 ---
 
@@ -78,4 +78,4 @@ Please visit the [Isaac ROS Documentation](https://nvidia-isaac-ros.github.io/re
 
 ### Latest
 
-Update 2023-10-18: Renamed repository to `isaac_ros_depth_segmentation`.
+Update 2024-05-30: Update to be compatible with JetPack 6.0
