@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,14 +29,10 @@ ament_auto_find_build_dependencies()
 ament_auto_add_library(bi3d_node SHARED src/bi3d_node.cpp)
 rclcpp_components_register_nodes(bi3d_node "nvidia::isaac_ros::bi3d::Bi3DNode")
 set(node_plugins "${node_plugins}nvidia::isaac_ros::bi3d::Bi3DNode;$<TARGET_FILE:bi3d_node>\n")
-
-### Install extensions built from source
-
-# Bi3d
-add_subdirectory(gxf)
-install(TARGETS gxf_cvcore_bi3d DESTINATION share/${PROJECT_NAME}/gxf/lib/bi3d)
-
-### End extensions
+set_target_properties(bi3d_node PROPERTIES
+  BUILD_WITH_INSTALL_RPATH TRUE
+  BUILD_RPATH_USE_ORIGIN TRUE
+  INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 install(PROGRAMS scripts/isaac_ros_bi3d_visualizer.py DESTINATION lib/${PROJECT_NAME})
 

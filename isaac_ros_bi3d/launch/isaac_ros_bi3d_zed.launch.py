@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -98,6 +98,8 @@ def generate_launch_description():
         name='image_format_node_left',
         parameters=[{
                 'encoding_desired': 'rgb8',
+                'image_width': image_width,
+                'image_height': image_height
         }],
         remappings=[
             ('image_raw', 'zed_node/left/image_rect_color'),
@@ -110,6 +112,8 @@ def generate_launch_description():
         name='image_format_node_right',
         parameters=[{
                 'encoding_desired': 'rgb8',
+                'image_width': image_width,
+                'image_height': image_height
         }],
         remappings=[
             ('image_raw', 'zed_node/right/image_rect_color'),
