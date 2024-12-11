@@ -54,8 +54,6 @@ def generate_launch_description():
         package='isaac_ros_argus_camera',
         plugin='nvidia::isaac_ros::argus::ArgusStereoNode',
         parameters=[{
-            'left_optical_frame_name': 'left/image_rect',
-            'right_optical_frame_name': 'right/image_rect',
             'module_id': module_id
         }],
     )
